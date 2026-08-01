@@ -7,7 +7,9 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/sanydo93-eng/crypto-futures-pwa.git"
-BRANCH="claude/server-tg-signals-setup-mxo0y9"
+# After the pull request is merged, install from main instead:
+#   curl -fsSL .../main/install.sh | sudo BRANCH=main bash
+BRANCH="${BRANCH:-claude/server-tg-signals-setup-mxo0y9}"
 DIR="${INSTALL_DIR:-/opt/crypto-futures-pwa}"
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
