@@ -1,0 +1,17 @@
+services:
+  signals:
+    build: .
+    image: crypto-futures-signals:latest
+    container_name: crypto-futures-signals
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - signals-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  signals-data:
