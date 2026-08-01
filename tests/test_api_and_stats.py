@@ -265,3 +265,16 @@ def test_tracked_trade_shows_up_in_the_feed_with_its_result(store, config):
     assert item["status"] == "loss"
     assert item["exit_reason"] == "sl"
     assert item["r_multiple"] == -1.0
+
+
+def test_candle_snapshots_are_rounded_to_keep_the_feed_light(store):
+    noisy = [
+        Candle(ts=TS, open=3897.7991152258846, high=3899.1234567891234,
+               low=3890.9876543210987, close=3895.5555555555557, volume=1234.56789)
+    ]
+    store.save_signal(_signal(), granularity=15, candles=noisy, max_hold_seconds=86400)
+    row = store.signal_detail(1)["candles"][0]
+
+    assert row[1] == 3897.7991
+    assert row[5] == 1234.57
+    assert all(len(repr(v)) <= 12 for v in row[1:]), "no 17-digit floats in the payload"

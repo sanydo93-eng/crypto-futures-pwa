@@ -249,7 +249,14 @@ class Storage:
 
 
 def _candle_row(c: Candle) -> list[float]:
-    return [c.ts, c.open, c.high, c.low, c.close, c.volume]
+    # Snapshots are only ever redrawn as a chart, so full float precision is
+    # dead weight on a mobile connection: 8 significant figures is far more
+    # than a few hundred pixels of chart can resolve.
+    return [c.ts, _round(c.open), _round(c.high), _round(c.low), _round(c.close), round(c.volume, 2)]
+
+
+def _round(value: float) -> float:
+    return float(f"{value:.8g}")
 
 
 def _signal_dict(row: sqlite3.Row, candle_limit: int | None) -> dict:

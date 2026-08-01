@@ -250,7 +250,7 @@ function card(item, detailed) {
 
 async function renderFeed() {
   try {
-    const params = new URLSearchParams({ limit: '30' });
+    const params = new URLSearchParams({ limit: '50' });
     if (state.symbol) params.set('symbol', state.symbol);
     const data = await getJSON(`api/feed?${params}`);
 
