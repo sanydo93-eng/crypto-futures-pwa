@@ -1,0 +1,172 @@
+name: Deploy to server
+
+# Deploys the bot to your server without you opening a terminal.
+#
+# Setup once, in the repository: Settings -> Secrets and variables -> Actions
+#
+#   SERVER_HOST          IP or hostname, e.g. 5.10.218.52
+#   SERVER_USER          optional, defaults to root
+#   SERVER_SSH_KEY       private key (preferred), OR
+#   SERVER_PASSWORD      password, if you have no key
+#   TELEGRAM_BOT_TOKEN   token from @BotFather
+#   TELEGRAM_CHAT_ID     @your_channel or -100...
+#   SYMBOLS              optional, overrides the default pair list
+#   APP_URL              optional, defaults to http://SERVER_HOST:8080
+#
+# Then: Actions -> Deploy to server -> Run workflow.
+# Secrets are masked in the log and are written straight to .env on the
+# server over the SSH pipe, never onto a command line.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do on the server
+        type: choice
+        default: deploy
+        options: [deploy, restart, logs, stop]
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          KEY: ${{ secrets.SERVER_SSH_KEY }}
+          PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          missing=""
+          [ -n "$HOST" ] || missing="$missing SERVER_HOST"
+          [ -n "$KEY" ] || [ -n "$PASSWORD" ] || missing="$missing SERVER_SSH_KEY-или-SERVER_PASSWORD"
+          if [ "${{ inputs.action }}" = "deploy" ]; then
+            [ -n "$TG_TOKEN" ] || missing="$missing TELEGRAM_BOT_TOKEN"
+            [ -n "$TG_CHAT" ] || missing="$missing TELEGRAM_CHAT_ID"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Не заданы секреты:$missing — добавь их в Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - name: Set up SSH
+        env:
+          KEY: ${{ secrets.SERVER_SSH_KEY }}
+          PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          if [ -n "$KEY" ]; then
+            printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            echo "SSH_CMD=ssh -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" >> "$GITHUB_ENV"
+          else
+            sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+            echo "SSH_CMD=sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" >> "$GITHUB_ENV"
+          fi
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Write .env locally
+        if: ${{ inputs.action == 'deploy' }}
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SYMBOLS: ${{ secrets.SYMBOLS }}
+          APP_URL: ${{ secrets.APP_URL }}
+          HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          {
+            echo "TELEGRAM_BOT_TOKEN=$TG_TOKEN"
+            echo "TELEGRAM_CHAT_ID=$TG_CHAT"
+            echo "SYMBOLS=${SYMBOLS:-XBTUSDTM,ETHUSDTM,SOLUSDTM,XRPUSDTM,DOGEUSDTM,ADAUSDTM,AVAXUSDTM,LINKUSDTM,LTCUSDTM,DOTUSDTM}"
+            echo "GRANULARITY=15"
+            echo "STRATEGY=fvg_retest"
+            echo "STRAT_MIN_STRENGTH=55"
+            echo "STRAT_REQUIRE_TREND=true"
+            echo "MAX_HOLD_HOURS=24"
+            echo "MOVE_STOP_TO_BREAKEVEN=true"
+            echo "WEB_ENABLED=true"
+            echo "WEB_PORT=8080"
+            echo "APP_URL=${APP_URL:-http://$HOST:8080}"
+            echo "SEND_CHART=true"
+            echo "DRY_RUN=false"
+            echo "SEND_STARTUP_MESSAGE=true"
+            echo "LOG_LEVEL=INFO"
+          } > env.deploy
+
+      - name: Deploy
+        if: ${{ inputs.action == 'deploy' }}
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          SRV_USER: ${{ secrets.SERVER_USER }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          TARGET="${SRV_USER:-root}@$HOST"
+          DIR=/opt/crypto-futures-pwa
+
+          $SSH_CMD "$TARGET" bash -s <<EOF
+          set -euo pipefail
+          command -v git >/dev/null || (apt-get update -qq && apt-get install -y -qq git)
+          command -v docker >/dev/null || curl -fsSL https://get.docker.com | sh
+          systemctl start docker 2>/dev/null || true
+          if [ -d "$DIR/.git" ]; then
+            git -C "$DIR" fetch origin "$BRANCH"
+            git -C "$DIR" checkout "$BRANCH"
+            git -C "$DIR" reset --hard "origin/$BRANCH"
+          else
+            git clone --branch "$BRANCH" https://github.com/${{ github.repository }}.git "$DIR"
+          fi
+          EOF
+
+          # .env travels over the pipe, so it never appears in a process list.
+          $SSH_CMD "$TARGET" "cat > $DIR/.env && chmod 600 $DIR/.env" < env.deploy
+          rm -f env.deploy
+
+          $SSH_CMD "$TARGET" bash -s <<EOF
+          set -euo pipefail
+          cd $DIR
+          if docker compose version >/dev/null 2>&1; then C="docker compose"; else C="docker-compose"; fi
+          \$C build
+          \$C up -d
+          sleep 6
+          \$C ps
+          echo "--- последние логи ---"
+          \$C logs --tail 25
+          EOF
+
+      - name: Restart / logs / stop
+        if: ${{ inputs.action != 'deploy' }}
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          SRV_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          TARGET="${SRV_USER:-root}@$HOST"
+          case "${{ inputs.action }}" in
+            restart) CMD="\$C restart && \$C ps" ;;
+            logs)    CMD="\$C logs --tail 200" ;;
+            stop)    CMD="\$C down" ;;
+          esac
+          $SSH_CMD "$TARGET" bash -s <<EOF
+          set -euo pipefail
+          cd /opt/crypto-futures-pwa
+          if docker compose version >/dev/null 2>&1; then C="docker compose"; else C="docker-compose"; fi
+          $CMD
+          EOF
+
+      - name: Summary
+        if: ${{ always() && inputs.action == 'deploy' }}
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          echo "### Приложение" >> "$GITHUB_STEP_SUMMARY"
+          echo "${APP_URL:-http://$HOST:8080}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Логи: Actions → Deploy to server → Run workflow → action: logs" >> "$GITHUB_STEP_SUMMARY"

@@ -211,3 +211,33 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
 Сигналы носят информационный характер и не являются инвестиционной
 рекомендацией. Торговля фьючерсами с плечом сопряжена с риском потери всех
 средств. Статистика прошлых сигналов не гарантирует будущий результат.
+
+## Установка
+
+### Вариант 1 — одна команда на сервере
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sanydo93-eng/crypto-futures-pwa/claude/server-tg-signals-setup-mxo0y9/install.sh | sudo bash
+```
+
+Скрипт поставит Docker, если его нет, заберёт код в `/opt/crypto-futures-pwa`,
+спросит токен бота и канал (ввод токена не отображается), запишет `.env` с
+правами `600` и запустит. В конце напечатает адрес приложения.
+
+### Вариант 2 — деплой из GitHub, без консоли сервера
+
+Если не хочешь заходить на сервер вообще: в репозитории
+**Settings → Secrets and variables → Actions** добавь секреты
+
+| Секрет | Значение |
+|--------|----------|
+| `SERVER_HOST` | IP сервера |
+| `SERVER_SSH_KEY` | приватный ключ (либо `SERVER_PASSWORD`) |
+| `TELEGRAM_BOT_TOKEN` | токен от @BotFather |
+| `TELEGRAM_CHAT_ID` | `@канал` или `-100…` |
+
+и запусти **Actions → Deploy to server → Run workflow**. Тот же workflow умеет
+`restart`, `logs` и `stop` — логи сервера будут видны прямо в GitHub.
+
+Ключ надёжнее пароля: сгенерируй `ssh-keygen -t ed25519`, положи публичную
+часть в `~/.ssh/authorized_keys` на сервере, приватную — в секрет.
