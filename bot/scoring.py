@@ -41,7 +41,16 @@ class Score:
 
     @property
     def total(self) -> float:
-        return round(sum(f.score for f in self.factors), 1)
+        """Always 0-100, whatever the factor weights happen to add up to.
+
+        Normalising here rather than hand-balancing the weights means adding or
+        reweighting a factor can never push a signal past 100 and break the
+        grade thresholds or the strength bar.
+        """
+        achievable = sum(f.maximum for f in self.factors)
+        if achievable <= 0:
+            return 0.0
+        return round(sum(f.score for f in self.factors) / achievable * 100, 1)
 
     @property
     def grade(self) -> str:

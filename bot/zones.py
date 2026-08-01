@@ -50,13 +50,22 @@ class Zone:
     def age_candles(self, current_index: int) -> int:
         return current_index - self.created_index
 
-    def to_dict(self) -> dict:
+    def touches_before(self, ts: int) -> int:
+        """Touches that happened strictly before `ts`.
+
+        The candle doing the current retest is itself a touch, so freshness has
+        to be judged on what came before it — otherwise every first retest looks
+        like a second one.
+        """
+        return sum(1 for t in self.touch_ts if t < ts)
+
+    def to_dict(self, before_ts: int | None = None) -> dict:
         return {
             "side": self.side.value,
             "top": self.top,
             "bottom": self.bottom,
             "created_ts": self.created_ts,
-            "touches": self.touches,
+            "touches": self.touches_before(before_ts) if before_ts else self.touches,
             "invalidated": self.invalidated,
             "displacement_atr": round(self.displacement_atr, 3),
         }

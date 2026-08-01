@@ -100,24 +100,30 @@ function chartSVG(candles, opts) {
     );
   });
 
+  // Levels can coincide — an exit exactly at target 2, say — so keep the line
+  // but drop a label that would land on top of one already drawn.
+  const labelled = [];
   const level = (price, colour, label, dash) => {
     if (typeof price !== 'number') return;
     const py = y(price);
     parts.push(
       `<line x1="0" y1="${py.toFixed(1)}" x2="${plotW}" y2="${py.toFixed(1)}" stroke="${colour}" ` +
-      `stroke-width="1" stroke-opacity="0.8" stroke-dasharray="${dash}"/>`,
+      `stroke-width="1" stroke-opacity="0.8" stroke-dasharray="${dash}"/>`
+    );
+    if (labelled.some((used) => Math.abs(used - py) < 9)) return;
+    labelled.push(py);
+    parts.push(
       `<text x="${plotW + 4}" y="${(py + 3.2).toFixed(1)}" fill="${colour}" font-size="9.5">` +
       `${esc(label)}</text>`
     );
   };
 
+  if (typeof o.exit === 'number') {
+    level(o.exit, '#a78bfa', 'выход', '1 2');   // drawn first so it keeps its label
+  }
   level(o.entry, '#f4f4f5', 'вход', '4 3');
   level(o.stop, '#e2504a', 'стоп', '2 3');
   (o.targets || []).forEach((t, i) => level(t, '#26a17b', `цель ${i + 1}`, '2 3'));
-
-  if (typeof o.exit === 'number') {
-    level(o.exit, '#a78bfa', 'выход', '1 2');
-  }
 
   const ex = plotW - step / 2;
   const ey = y(o.entry);

@@ -73,7 +73,9 @@ def test_signal_carries_a_scored_explanation():
     assert {f["name"] for f in signal.factors} == {
         "trend", "freshness", "displacement", "geometry", "reaction", "volume", "rsi"
     }
-    assert sum(f["score"] for f in signal.factors) == pytest.approx(signal.strength, abs=0.2)
+    achievable = sum(f["max"] for f in signal.factors)
+    earned = sum(f["score"] for f in signal.factors)
+    assert signal.strength == pytest.approx(earned / achievable * 100, abs=0.2)
     assert all(f["note"] for f in signal.factors), "every factor must explain itself"
     assert any("FVG" in r for r in signal.reasons)
 
@@ -126,16 +128,43 @@ def test_strength_threshold_filters_weak_setups():
 
 def test_fresh_zone_scores_higher_than_a_touched_one():
     strategy = build_strategy("fvg_retest", {"MIN_STRENGTH": "0"})
-    fresh = strategy.evaluate("XBTUSDTM", bullish_setup())
+    base = bullish_setup()
+    fresh = strategy.evaluate("XBTUSDTM", base)
 
     top = uptrend()[-1].close
-    candles = bullish_setup()
-    # insert an earlier touch of the zone before the retest
-    touched = candles[:-1] + [
-        _c(len(candles) - 1, top + 8.0, top + 8.5, top + 2.0, top + 7.0),
-        candles[-1],
+    n = len(base) - 1
+    retest = base[-1]
+    # An earlier dip into the zone, then the same retest one candle later.
+    touched = base[:-1] + [
+        _c(n, top + 8.0, top + 8.5, top + 2.0, top + 7.0),
+        Candle(
+            ts=retest.ts + STEP,
+            open=retest.open,
+            high=retest.high,
+            low=retest.low,
+            close=retest.close,
+            volume=retest.volume,
+        ),
     ]
     retouched = strategy.evaluate("XBTUSDTM", touched)
 
     assert retouched is not None
+    assert fresh.zone["touches"] == 0
+    assert retouched.zone["touches"] == 1
     assert retouched.strength < fresh.strength
+
+
+def test_strength_never_exceeds_100_even_on_a_perfect_setup():
+    """Factor maxima sum to more than 100, so the score must be normalised."""
+    strategy = build_strategy("fvg_retest", {"MIN_STRENGTH": "0"})
+    signal = strategy.evaluate("XBTUSDTM", bullish_setup())
+    assert 0 <= signal.strength <= 100
+    assert sum(f["max"] for f in signal.factors) > 100, "premise of this test"
+
+
+def test_grade_tracks_the_normalised_strength():
+    strategy = build_strategy("fvg_retest", {"MIN_STRENGTH": "0"})
+    signal = strategy.evaluate("XBTUSDTM", bullish_setup())
+    expected = ("A" if signal.strength >= 80 else "B" if signal.strength >= 68
+                else "C" if signal.strength >= 55 else "D")
+    assert signal.grade == expected

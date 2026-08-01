@@ -106,3 +106,18 @@ def test_rejection_ratio_measures_the_wick():
 
     doji = Candle(ts=TS, open=100, high=100, low=100, close=100, volume=1)
     assert rejection_ratio(doji, Side.LONG) == 0.0
+
+
+def test_touches_before_excludes_the_candle_doing_the_retest():
+    candles = _filler(30)
+    candles += [
+        c(30, 100, 101, 99, 100),
+        c(31, 101, 118, 100, 117),
+        c(32, 117, 120, 105, 119),
+        c(33, 119, 120, 103, 110),     # first touch
+        c(34, 110, 115, 102, 114),     # the retest itself
+    ]
+    zone = [z for z in find_zones(candles, ind.atr(candles, 14)) if z.side is Side.LONG][0]
+    assert zone.touches == 2
+    assert zone.touches_before(candles[-1].ts) == 1, "the retest candle must not count itself"
+    assert zone.to_dict(before_ts=candles[-1].ts)["touches"] == 1

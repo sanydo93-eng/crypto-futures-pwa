@@ -174,7 +174,7 @@ class FvgRetestStrategy(Strategy):
             strength=score.total,
             grade=score.grade,
             factors=score.to_dict(),
-            zone=zone.to_dict(),
+            zone=zone.to_dict(before_ts=last.ts),
             reasons=[headline] + score.notes(),
             extra={
                 "Стоп за зоной": f"{self.stop_buffer_atr}×ATR",
@@ -214,12 +214,14 @@ class FvgRetestStrategy(Strategy):
             score.add("trend", "Тренд", 0, 25, "вход против тренда старших EMA")
 
         # 2. Freshness — an untouched gap has the whole unfilled order flow behind it.
-        if zone.touches == 0:
+        # Counted before the current candle, which is itself a touch.
+        prior = zone.touches_before(last.ts)
+        if prior == 0:
             score.add("freshness", "Свежесть зоны", 20, 20, "зона нетронутая, это первый ретест")
-        elif zone.touches == 1:
+        elif prior == 1:
             score.add("freshness", "Свежесть зоны", 11, 20, "зону уже касались один раз")
         else:
-            score.add("freshness", "Свежесть зоны", 4, 20, f"зону касались {zone.touches} раза")
+            score.add("freshness", "Свежесть зоны", 4, 20, f"зону касались {prior} раза")
 
         # 3. Displacement — how decisive the move that left the gap was.
         disp = zone.displacement_atr
