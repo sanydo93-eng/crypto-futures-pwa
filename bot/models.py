@@ -38,6 +38,29 @@ class Signal:
     reasons: list[str] = field(default_factory=list)
     extra: dict[str, str] = field(default_factory=dict)
 
+    #: 0-100 confidence with a per-factor breakdown behind it
+    strength: float = 0.0
+    grade: str = ""
+    factors: list[dict] = field(default_factory=list)
+    #: the FVG zone this entry is built on, if the strategy uses zones
+    zone: dict | None = None
+
+    #: db id, filled in once persisted
+    id: int | None = None
+
     @property
     def key(self) -> str:
         return f"{self.strategy}:{self.symbol}"
+
+    @property
+    def risk(self) -> float:
+        if self.stop_loss is None:
+            return 0.0
+        return abs(self.price - self.stop_loss)
+
+    def r_multiple_at(self, price: float) -> float:
+        """How many R the trade is worth if it exits at `price`."""
+        if not self.risk:
+            return 0.0
+        delta = price - self.price if self.side is Side.LONG else self.price - price
+        return delta / self.risk

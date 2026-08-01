@@ -1,0 +1,20 @@
+{
+  "name": "Крипто-сигналы · FVG",
+  "short_name": "Сигналы",
+  "description": "Зональные сигналы по фьючерсам KuCoin: ретест FVG, сила сигнала, вход и выход, статистика.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

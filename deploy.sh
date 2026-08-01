@@ -44,10 +44,17 @@ echo "==> Запуск"
 echo "==> Статус"
 "${COMPOSE[@]}" ps
 
-cat <<'EOF'
+PORT="$(grep -E '^WEB_PORT=' .env | head -n1 | cut -d= -f2- || true)"
+PORT="${PORT:-8080}"
+IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 
-Готово. Полезные команды:
+cat <<EOF
+
+Готово. Приложение: http://${IP:-<ip-сервера>}:${PORT}
+
+Полезные команды:
   docker compose logs -f          # смотреть логи
   docker compose restart          # перезапуск после правки .env
   docker compose down             # остановить
+  git pull && ./deploy.sh         # обновиться до свежей версии
 EOF
