@@ -12,6 +12,7 @@ import signal as signal_module
 import time
 
 from . import api as api_module
+from . import balance as balance_module
 from . import chart
 from .config import Config
 from .exchange import KuCoinError, KuCoinFutures
@@ -56,6 +57,7 @@ async def run(config: Config) -> None:
                 candles = await _fetch(exchange, symbol, config)
                 if candles:
                     candles_by_symbol[symbol] = candles
+                    storage.upsert_market_candles(symbol, candles, config.market_candles_kept)
                     await _check_for_signal(
                         symbol, candles, config, strategy, notifier, storage
                     )
@@ -104,7 +106,9 @@ async def _preflight(config: Config, strategy, exchange: KuCoinFutures, notifier
             "🤖 Бот сигналов запущен\n"
             f"Пары: {', '.join(config.symbols)}\n"
             f"Таймфрейм: {config.granularity}m · стратегия: {strategy.name}\n"
-            f"Сделка живёт максимум {config.max_hold_hours:g} ч{link}"
+            f"Сделка живёт максимум {config.max_hold_hours:g} ч\n"
+            f"Виртуальный баланс: {config.starting_balance:g} {config.balance_currency} "
+            f"· риск {config.risk_per_trade_pct:g}% на сделку{link}"
         )
 
 
@@ -150,7 +154,12 @@ async def _check_for_signal(
         log.info("%s: %s suppressed by cooldown", symbol, result.side.value)
         return
 
-    signal_id = storage.save_signal(result, config.granularity, candles, config.max_hold_seconds)
+    risk_amount = balance_module.risk_amount_now(
+        storage, config.starting_balance, config.risk_per_trade_pct
+    )
+    signal_id = storage.save_signal(
+        result, config.granularity, candles, config.max_hold_seconds, risk_amount=risk_amount
+    )
     result.id = signal_id
 
     image = chart.render(result, candles, config.granularity) if config.send_chart else None
@@ -204,7 +213,12 @@ async def _review_open_trades(
             continue
 
         if update is not None:
-            await notifier.send(format_trade_closed(update, config.app_url))
+            new_balance = balance_module.realized_balance(
+                storage, config.starting_balance, config.risk_per_trade_pct
+            )
+            await notifier.send(
+                format_trade_closed(update, config.app_url, new_balance, config.balance_currency)
+            )
 
 
 def _seconds_until_next_run(config: Config, elapsed: float) -> float:

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from aiohttp import web
 
+from . import balance as balance_module
 from . import stats as stats_module
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,8 @@ def build_app(storage, config) -> web.Application:
     app.router.add_get("/api/feed", _feed)
     app.router.add_get("/api/signals/{signal_id}", _signal_detail)
     app.router.add_get("/api/stats", _stats)
+    app.router.add_get("/api/market", _market_summary)
+    app.router.add_get("/api/market/{symbol}", _market_detail)
 
     if WEB_ROOT.is_dir():
         app.router.add_get("/", _index)
@@ -66,6 +69,8 @@ async def _config(request: web.Request) -> web.Response:
             "granularity": config.granularity,
             "strategy": config.strategy,
             "max_hold_hours": config.max_hold_hours,
+            "balance_currency": config.balance_currency,
+            "risk_per_trade_pct": config.risk_per_trade_pct,
         }
     )
 
@@ -97,7 +102,30 @@ async def _signal_detail(request: web.Request) -> web.Response:
 
 
 async def _stats(request: web.Request) -> web.Response:
-    return web.json_response(stats_module.build(request.app[STORAGE]))
+    storage = request.app[STORAGE]
+    config = request.app[CONFIG]
+    body = stats_module.build(storage)
+    body["balance"] = balance_module.build(
+        storage, config.starting_balance, config.risk_per_trade_pct, config.balance_currency
+    )
+    return web.json_response(body)
+
+
+async def _market_summary(request: web.Request) -> web.Response:
+    storage = request.app[STORAGE]
+    return web.json_response({"items": storage.market_summary(), "granularity": request.app[CONFIG].granularity})
+
+
+async def _market_detail(request: web.Request) -> web.Response:
+    storage = request.app[STORAGE]
+    symbol = request.match_info["symbol"].upper()
+    limit = _clamp(request.query.get("limit"), default=200, low=10, high=500)
+    candles = storage.market_candles(symbol, limit)
+    if not candles:
+        raise web.HTTPNotFound(reason="no market data for this symbol yet")
+    return web.json_response(
+        {"symbol": symbol, "granularity": request.app[CONFIG].granularity, "candles": candles}
+    )
 
 
 def _clamp(raw: str | None, default: int, low: int, high: int) -> int:

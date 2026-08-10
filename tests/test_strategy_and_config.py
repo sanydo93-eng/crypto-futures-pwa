@@ -113,3 +113,22 @@ def test_formatted_message_escapes_html_and_names_the_pair():
     assert "XBT&lt;USDTM" in text
     assert "LONG" in text
     assert "15m" in text
+
+
+def test_config_rejects_non_positive_starting_balance():
+    with pytest.raises(ValueError, match="STARTING_BALANCE"):
+        Config.from_env({**BASE_ENV, "STARTING_BALANCE": "0"})
+
+
+def test_config_rejects_risk_per_trade_out_of_range():
+    with pytest.raises(ValueError, match="RISK_PER_TRADE_PCT"):
+        Config.from_env({**BASE_ENV, "RISK_PER_TRADE_PCT": "0"})
+    with pytest.raises(ValueError, match="RISK_PER_TRADE_PCT"):
+        Config.from_env({**BASE_ENV, "RISK_PER_TRADE_PCT": "150"})
+
+
+def test_config_balance_defaults_are_sane():
+    config = Config.from_env(BASE_ENV)
+    assert config.starting_balance == 1000.0
+    assert config.risk_per_trade_pct == 1.0
+    assert config.balance_currency == "USDT"

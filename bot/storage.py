@@ -58,9 +58,31 @@ CREATE TABLE IF NOT EXISTS trades (
     UNIQUE(signal_id)
 );
 
+-- Rolling window of recent candles per symbol, refreshed every poll cycle from
+-- data the bot already fetched for strategy evaluation (no extra API calls).
+-- Powers the market chart screen; unrelated to signals or trades.
+CREATE TABLE IF NOT EXISTS market_candles (
+    symbol TEXT    NOT NULL,
+    ts     INTEGER NOT NULL,
+    open   REAL    NOT NULL,
+    high   REAL    NOT NULL,
+    low    REAL    NOT NULL,
+    close  REAL    NOT NULL,
+    volume REAL    NOT NULL,
+    PRIMARY KEY (symbol, ts)
+);
+
 CREATE INDEX IF NOT EXISTS idx_signals_created ON signals(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_trades_status   ON trades(status);
 """
+
+# Columns added after the initial release. CREATE TABLE IF NOT EXISTS does not
+# retrofit an existing table, so a plain ALTER (ignoring "duplicate column" on
+# a database that already has it) is the migration for both fresh and
+# upgraded installs.
+_MIGRATIONS = [
+    "ALTER TABLE trades ADD COLUMN risk_amount REAL",
+]
 
 
 class Storage:
@@ -73,6 +95,12 @@ class Storage:
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.executescript(SCHEMA)
+        for migration in _MIGRATIONS:
+            try:
+                self._conn.execute(migration)
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    raise
         self._conn.commit()
         log.info("storage ready at %s", path)
 
@@ -100,6 +128,7 @@ class Storage:
         granularity: int,
         candles: list[Candle],
         max_hold_seconds: int,
+        risk_amount: float | None = None,
     ) -> int:
         now = int(time.time() * 1000)
         cur = self._conn.execute(
@@ -131,10 +160,14 @@ class Storage:
 
         # The clock starts at the entry candle, not at the moment we wrote the
         # row, so "no longer than a day" is measured from the trade itself.
+        # risk_amount is fixed at open time — the virtual position size this
+        # trade risks, in currency — so later re-ordering of closes can't
+        # retroactively change what a past trade was worth.
         self._conn.execute(
             """
-            INSERT INTO trades (signal_id, status, opened_at, deadline, stop_at, last_checked_ts)
-            VALUES (?, 'open', ?, ?, ?, ?)
+            INSERT INTO trades (signal_id, status, opened_at, deadline, stop_at,
+                                last_checked_ts, risk_amount)
+            VALUES (?, 'open', ?, ?, ?, ?, ?)
             """,
             (
                 signal_id,
@@ -142,6 +175,7 @@ class Storage:
                 signal.candle_ts + max_hold_seconds * 1000,
                 signal.stop_loss,
                 signal.candle_ts,
+                risk_amount,
             ),
         )
         self._conn.commit()
@@ -251,6 +285,72 @@ class Storage:
 
     def symbols_seen(self) -> list[str]:
         return [r["symbol"] for r in self._conn.execute("SELECT DISTINCT symbol FROM signals ORDER BY symbol")]
+
+    # -- market data (independent of signals) -------------------------------
+
+    def upsert_market_candles(self, symbol: str, candles: list[Candle], keep: int = 200) -> None:
+        """Refresh the rolling candle window for a symbol and prune the rest.
+
+        Called every poll cycle with data the bot already fetched for the
+        strategy, so this costs a few local writes, not an extra API call.
+        """
+        if not candles:
+            return
+        recent = candles[-keep:]
+        self._conn.executemany(
+            """
+            INSERT INTO market_candles (symbol, ts, open, high, low, close, volume)
+            VALUES (?,?,?,?,?,?,?)
+            ON CONFLICT(symbol, ts) DO UPDATE SET
+                open=excluded.open, high=excluded.high, low=excluded.low,
+                close=excluded.close, volume=excluded.volume
+            """,
+            [
+                (symbol, c.ts, _round(c.open), _round(c.high), _round(c.low), _round(c.close), round(c.volume, 2))
+                for c in recent
+            ],
+        )
+        cutoff = recent[0].ts
+        self._conn.execute(
+            "DELETE FROM market_candles WHERE symbol = ? AND ts < ?", (symbol, cutoff)
+        )
+        self._conn.commit()
+
+    def market_candles(self, symbol: str, limit: int = 200) -> list[list[float]]:
+        rows = self._conn.execute(
+            """
+            SELECT ts, open, high, low, close, volume FROM market_candles
+            WHERE symbol = ? ORDER BY ts DESC LIMIT ?
+            """,
+            (symbol, limit),
+        ).fetchall()
+        return [[r["ts"], r["open"], r["high"], r["low"], r["close"], r["volume"]] for r in reversed(rows)]
+
+    def market_summary(self) -> list[dict]:
+        """Last price and the change across the stored window, per symbol."""
+        symbols = [
+            r["symbol"]
+            for r in self._conn.execute("SELECT DISTINCT symbol FROM market_candles ORDER BY symbol")
+        ]
+        summary = []
+        for symbol in symbols:
+            rows = self._conn.execute(
+                "SELECT ts, close FROM market_candles WHERE symbol = ? ORDER BY ts", (symbol,)
+            ).fetchall()
+            if not rows:
+                continue
+            first, last = rows[0]["close"], rows[-1]["close"]
+            change_pct = (last - first) / first * 100 if first else 0.0
+            summary.append(
+                {
+                    "symbol": symbol,
+                    "last": last,
+                    "change_pct": round(change_pct, 2),
+                    "ts": rows[-1]["ts"],
+                    "candles": len(rows),
+                }
+            )
+        return summary
 
 
 def _candle_row(c: Candle) -> list[float]:

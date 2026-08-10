@@ -29,6 +29,12 @@ class Config:
     max_hold_hours: float = 24.0
     move_stop_to_breakeven: bool = True
 
+    starting_balance: float = 1000.0
+    risk_per_trade_pct: float = 1.0
+    balance_currency: str = "USDT"
+
+    market_candles_kept: int = 200
+
     db_path: str = "/data/signals.db"
     web_enabled: bool = True
     web_host: str = "0.0.0.0"
@@ -64,6 +70,14 @@ class Config:
         if not 0 < max_hold_hours <= 24:
             raise ValueError("MAX_HOLD_HOURS must be greater than 0 and at most 24")
 
+        starting_balance = _float(env, "STARTING_BALANCE", 1000.0)
+        if starting_balance <= 0:
+            raise ValueError("STARTING_BALANCE must be greater than 0")
+
+        risk_per_trade_pct = _float(env, "RISK_PER_TRADE_PCT", 1.0)
+        if not 0 < risk_per_trade_pct <= 100:
+            raise ValueError("RISK_PER_TRADE_PCT must be greater than 0 and at most 100")
+
         params = {
             key[len(STRATEGY_PARAM_PREFIX) :]: value
             for key, value in env.items()
@@ -83,6 +97,10 @@ class Config:
             history_candles=_int(env, "HISTORY_CANDLES", 300),
             max_hold_hours=max_hold_hours,
             move_stop_to_breakeven=_flag(env.get("MOVE_STOP_TO_BREAKEVEN"), True),
+            starting_balance=starting_balance,
+            risk_per_trade_pct=risk_per_trade_pct,
+            balance_currency=env.get("BALANCE_CURRENCY", "USDT").strip().upper() or "USDT",
+            market_candles_kept=_int(env, "MARKET_CANDLES_KEPT", 200),
             db_path=env.get("DB_PATH", "/data/signals.db"),
             web_enabled=_flag(env.get("WEB_ENABLED"), True),
             web_host=env.get("WEB_HOST", "0.0.0.0"),

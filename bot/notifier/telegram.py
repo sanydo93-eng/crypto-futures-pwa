@@ -145,7 +145,12 @@ def format_signal(signal: Signal, granularity: int, app_url: str = "", compact: 
     return "\n".join(lines)
 
 
-def format_trade_closed(update, app_url: str = "") -> str:
+def format_trade_closed(
+    update,
+    app_url: str = "",
+    balance: float | None = None,
+    currency: str = "USDT",
+) -> str:
     icons = {"win": "✅", "loss": "❌", "breakeven": "➖"}
     titles = {"win": "Профит", "loss": "Убыток", "breakeven": "Безубыток"}
     reasons = {
@@ -165,6 +170,8 @@ def format_trade_closed(update, app_url: str = "") -> str:
         f"Выход: <code>{_fmt(update.exit_price)}</code> — {reasons.get(update.exit_reason, update.exit_reason)}",
         f"Результат: <b>{sign}{update.r_multiple:.2f}R</b> ({sign}{update.pnl_pct:.2f}%)",
     ]
+    if balance is not None:
+        lines.append(f"Виртуальный баланс: <b>{_fmt(balance)} {html.escape(currency)}</b>")
     if app_url:
         lines.append(f'📊 <a href="{html.escape(app_url)}/#/stats">Статистика</a>')
     return "\n".join(lines)

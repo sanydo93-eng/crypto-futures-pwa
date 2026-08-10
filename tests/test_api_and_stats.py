@@ -278,3 +278,141 @@ def test_candle_snapshots_are_rounded_to_keep_the_feed_light(store):
     assert row[1] == 3897.7991
     assert row[5] == 1234.57
     assert all(len(repr(v)) <= 12 for v in row[1:]), "no 17-digit floats in the payload"
+
+
+# -- market data ------------------------------------------------------------
+
+
+def _market_candles(count=5, start=100.0, step_price=1.0, ts_base=TS):
+    return [
+        Candle(ts=ts_base + i * STEP, open=start + i * step_price, high=start + i * step_price + 1,
+               low=start + i * step_price - 1, close=start + i * step_price, volume=10.0 + i)
+        for i in range(count)
+    ]
+
+
+def test_market_candles_round_trip(store):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(5))
+    rows = store.market_candles("XBTUSDTM")
+    assert len(rows) == 5
+    assert rows[0][0] < rows[-1][0], "oldest first"
+    assert rows[-1][4] == 104.0  # close of the last candle
+
+
+def test_market_candles_upsert_updates_rather_than_duplicates(store):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(3))
+    revised = _market_candles(3)
+    revised[-1] = Candle(ts=revised[-1].ts, open=200, high=201, low=199, close=200.5, volume=99)
+    store.upsert_market_candles("XBTUSDTM", revised)
+
+    rows = store.market_candles("XBTUSDTM")
+    assert len(rows) == 3, "same timestamp must update in place, not duplicate"
+    assert rows[-1][4] == 200.5
+
+
+def test_market_candles_window_is_pruned(store):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(10), keep=4)
+    rows = store.market_candles("XBTUSDTM", limit=100)
+    assert len(rows) == 4
+    assert rows[0][4] == 106.0  # only the most recent 4 closes remain: 106..109
+
+
+def test_market_candles_are_isolated_per_symbol(store):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(3, start=100))
+    store.upsert_market_candles("ETHUSDTM", _market_candles(3, start=3000))
+    assert len(store.market_candles("XBTUSDTM")) == 3
+    assert len(store.market_candles("ETHUSDTM")) == 3
+    assert store.market_candles("SOLUSDTM") == []
+
+
+def test_market_summary_reports_last_price_and_change(store):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(5, start=100, step_price=2))
+    summary = store.market_summary()
+    assert len(summary) == 1
+    entry = summary[0]
+    assert entry["symbol"] == "XBTUSDTM"
+    assert entry["last"] == 108.0
+    assert entry["change_pct"] == pytest.approx((108.0 - 100.0) / 100.0 * 100, abs=0.01)
+    assert entry["candles"] == 5
+
+
+def test_market_summary_empty_without_data(store):
+    assert store.market_summary() == []
+
+
+# -- risk_amount migration ---------------------------------------------------
+
+
+def test_risk_amount_is_persisted_and_defaults_to_none(store):
+    _seed(store, _signal())
+    row = store.open_trades()[0]
+    assert row["risk_amount"] is None
+
+    store2_signal = _signal(ts=TS + STEP)
+    store.save_signal(store2_signal, granularity=15, candles=_candles(), max_hold_seconds=86400,
+                      risk_amount=12.5)
+    # open_trades() doesn't select signals.candle_ts, but trades.opened_at is
+    # set from it, so it's the available way to pick out the second row.
+    row2 = [t for t in store.open_trades() if t["opened_at"] == TS + STEP][0]
+    assert row2["risk_amount"] == 12.5
+
+
+def test_reopening_storage_on_the_same_path_does_not_error(tmp_path):
+    path = str(tmp_path / "signals.db")
+    first = Storage(path)
+    first.save_signal(_signal(), granularity=15, candles=_candles(), max_hold_seconds=86400,
+                      risk_amount=9.0)
+    first.close()
+
+    # Simulates a restart against an existing database file: the migration
+    # must be idempotent rather than erroring on "duplicate column".
+    second = Storage(path)
+    row = second.open_trades()[0]
+    assert row["risk_amount"] == 9.0
+    second.close()
+
+
+# -- market API ---------------------------------------------------------
+
+
+def test_market_summary_endpoint(store, config):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(5))
+    status, body = _request(build_app(store, config), "/api/market")
+    assert status == 200
+    assert body["items"][0]["symbol"] == "XBTUSDTM"
+    assert body["granularity"] == config.granularity
+
+
+def test_market_detail_endpoint(store, config):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(5))
+    status, body = _request(build_app(store, config), "/api/market/XBTUSDTM")
+    assert status == 200
+    assert body["symbol"] == "XBTUSDTM"
+    assert len(body["candles"]) == 5
+
+
+def test_market_detail_lowercase_symbol_is_normalised(store, config):
+    store.upsert_market_candles("XBTUSDTM", _market_candles(5))
+    status, body = _request(build_app(store, config), "/api/market/xbtusdtm")
+    assert status == 200
+    assert body["symbol"] == "XBTUSDTM"
+
+
+def test_market_detail_unknown_symbol_is_404(store, config):
+    status, _ = _request(build_app(store, config), "/api/market/DOESNOTEXIST")
+    assert status == 404
+
+
+def test_stats_endpoint_includes_balance(store, config):
+    _seed(store, _signal())
+    status, body = _request(build_app(store, config), "/api/stats")
+    assert status == 200
+    assert body["balance"]["starting_balance"] == config.starting_balance
+    assert body["balance"]["currency"] == config.balance_currency
+
+
+def test_config_endpoint_includes_balance_settings(store, config):
+    status, body = _request(build_app(store, config), "/api/config")
+    assert status == 200
+    assert body["balance_currency"] == "USDT"
+    assert body["risk_per_trade_pct"] == 1.0

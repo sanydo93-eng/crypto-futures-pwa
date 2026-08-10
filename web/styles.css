@@ -293,6 +293,44 @@ a { color: inherit; text-decoration: none; }
 .trow .cell.pos { color: var(--long); }
 .trow .cell.neg { color: var(--short); }
 
+/* ---------- balance ---------- */
+
+.balance-hero { padding: 0 18px 4px; }
+.balance-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.balance-main b {
+  font-size: 30px;
+  font-weight: 750;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.balance-main b span { font-size: 15px; font-weight: 600; color: var(--muted); }
+.balance-main b.pos { color: var(--long); }
+.balance-main b.neg { color: var(--short); }
+.balance-change {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.balance-change.pos { color: var(--long); }
+.balance-change.neg { color: var(--short); }
+.balance-sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+/* ---------- market ---------- */
+
+.market-row { cursor: pointer; }
+.market-row .cell:last-child { min-width: 64px; text-align: right; }
+.market-avatar {
+  width: 30px; height: 30px;
+  font-size: 10px;
+  flex: none;
+}
+
 /* ---------- misc ---------- */
 
 .empty { padding: 60px 24px; text-align: center; color: var(--muted); font-size: 14px; }

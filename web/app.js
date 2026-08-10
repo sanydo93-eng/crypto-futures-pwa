@@ -125,16 +125,20 @@ function chartSVG(candles, opts) {
   level(o.stop, '#e2504a', 'стоп', '2 3');
   (o.targets || []).forEach((t, i) => level(t, '#26a17b', `цель ${i + 1}`, '2 3'));
 
-  const ex = plotW - step / 2;
-  const ey = y(o.entry);
-  const marker = o.side === 'LONG'
-    ? `${ex},${ey - 9} ${ex - 6},${ey + 3} ${ex + 6},${ey + 3}`
-    : `${ex},${ey + 9} ${ex - 6},${ey - 3} ${ex + 6},${ey - 3}`;
-  parts.push(`<polygon points="${marker}" fill="${o.side === 'LONG' ? '#26a17b' : '#e2504a'}" ` +
-    `stroke="#000" stroke-width="0.8"/>`);
+  // Plain market charts (no signal attached) carry neither — nothing to mark.
+  if (typeof o.entry === 'number' && o.side) {
+    const ex = plotW - step / 2;
+    const ey = y(o.entry);
+    const marker = o.side === 'LONG'
+      ? `${ex},${ey - 9} ${ex - 6},${ey + 3} ${ex + 6},${ey + 3}`
+      : `${ex},${ey + 9} ${ex - 6},${ey - 3} ${ex + 6},${ey - 3}`;
+    parts.push(`<polygon points="${marker}" fill="${o.side === 'LONG' ? '#26a17b' : '#e2504a'}" ` +
+      `stroke="#000" stroke-width="0.8"/>`);
+  }
 
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" ` +
-    `aria-label="График сигнала с зоной FVG, входом и выходом">${parts.join('')}</svg>`;
+    `aria-label="${esc(o.ariaLabel || 'График сигнала с зоной FVG, входом и выходом')}">` +
+    `${parts.join('')}</svg>`;
 }
 
 function equitySVG(curve) {
@@ -246,6 +250,117 @@ function card(item, detailed) {
     : `<a class="card" href="#/signal/${item.id}">${body}</a>`;
 }
 
+/* ---------------- balance ---------------- */
+
+function balanceBlock(b) {
+  if (!b) return '';
+  const tone = b.change_pct > 0 ? 'pos' : b.change_pct < 0 ? 'neg' : '';
+  const sign = b.change_pct >= 0 ? '+' : '';
+  return `
+    <div class="section-title">Виртуальный баланс</div>
+    <div class="balance-hero">
+      <div class="balance-main">
+        <b class="${tone}">${fmt(b.balance)} <span>${esc(b.currency)}</span></b>
+        <span class="balance-change ${tone}">${sign}${b.change_pct}%</span>
+      </div>
+      <div class="balance-sub">
+        Старт: ${fmt(b.starting_balance)} ${esc(b.currency)} · риск ${b.risk_per_trade_pct}% на сделку
+        ${b.open_trades ? ` · в риске сейчас: ${fmt(b.at_risk)} ${esc(b.currency)} (${b.open_trades} сд.)` : ''}
+      </div>
+    </div>
+    ${b.curve && b.curve.length > 1 ? `<div style="padding:10px 18px 0">${balanceCurveSVG(b.curve, b.currency)}</div>` : ''}
+    <p class="disclaimer">Виртуальный расчёт: нет ни одного ключа биржи, деньгами бот не управляет. Это симуляция риска ${b.risk_per_trade_pct}% от текущего баланса на сделку.</p>`;
+}
+
+function balanceCurveSVG(curve, currency) {
+  const W = 380, H = 110, pad = 10;
+  const values = curve.map((p) => p.balance);
+  const lo = Math.min(...values), hi = Math.max(...values);
+  const span = (hi - lo) || Math.max(1, values[0] * 0.02);
+  const x = (i) => (i / (curve.length - 1)) * W;
+  const y = (v) => pad + (hi - v) / span * (H - pad * 2);
+
+  const line = curve.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.balance).toFixed(1)}`).join('');
+  const area = `${line}L${W},${y(lo).toFixed(1)}L0,${y(lo).toFixed(1)}Z`;
+  const positive = values[values.length - 1] >= values[0];
+  const colour = positive ? '#26a17b' : '#e2504a';
+
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Кривая виртуального баланса в ${esc(currency)}">
+    <path d="${area}" fill="${colour}" fill-opacity="0.12"/>
+    <path d="${line}" fill="none" stroke="${colour}" stroke-width="1.8"/>
+  </svg>`;
+}
+
+/* ---------------- market ---------------- */
+
+async function renderMarket() {
+  try {
+    const data = await getJSON('api/market');
+    const items = data.items || [];
+
+    if (!items.length) {
+      view.innerHTML = `<div class="empty"><b>Пока нет данных</b>
+        Рыночные свечи появятся после первого цикла опроса биржи.</div>`;
+      meta.textContent = '';
+      return;
+    }
+
+    const rows = items.map((m) => {
+      const tone = m.change_pct > 0 ? 'pos' : m.change_pct < 0 ? 'neg' : '';
+      const sign = m.change_pct >= 0 ? '+' : '';
+      return `<a class="trow market-row" href="#/market/${esc(m.symbol)}">
+        <span class="avatar ${tone === 'neg' ? 'short' : 'long'} market-avatar">${esc(ticker(m.symbol))}</span>
+        <span class="name">${esc(m.symbol)}</span>
+        <span class="cell">${fmt(m.last)}</span>
+        <span class="cell ${tone}">${sign}${m.change_pct}%</span>
+      </a>`;
+    }).join('');
+
+    view.innerHTML = `
+      <div class="section-title">Рынок · ${data.granularity}m</div>
+      <div class="table">${rows}</div>
+      <p class="disclaimer">Изменение — за окно хранимых свечей, не за календарные сутки.</p>`;
+    meta.textContent = `${items.length} пар · ${data.granularity}m`;
+  } catch (err) {
+    view.innerHTML = `<div class="empty"><b>Нет связи с сервером</b>${esc(err.message)}</div>`;
+  }
+}
+
+async function renderMarketDetail(symbol) {
+  try {
+    const data = await getJSON(`api/market/${encodeURIComponent(symbol)}`);
+    const candles = data.candles || [];
+    const last = candles[candles.length - 1];
+    const first = candles[0];
+    const changePct = first && first[4] ? (last[4] - first[4]) / first[4] * 100 : 0;
+    const tone = changePct > 0 ? 'pos' : changePct < 0 ? 'neg' : '';
+    const sign = changePct >= 0 ? '+' : '';
+
+    view.innerHTML = `<a class="backlink" href="#/market">← Рынок</a>
+      <article class="card">
+        <div class="card-head">
+          <div class="avatar ${tone === 'neg' ? 'short' : 'long'}">${esc(ticker(data.symbol))}</div>
+          <div class="head-main">
+            <div class="head-top"><span class="symbol">${esc(data.symbol)}</span></div>
+            <div class="time">${data.granularity}m · ${candles.length} свечей в окне</div>
+          </div>
+        </div>
+        <div class="balance-hero" style="padding:0 0 12px">
+          <div class="balance-main">
+            <b>${fmt(last ? last[4] : null)}</b>
+            <span class="balance-change ${tone}">${sign}${changePct.toFixed(2)}%</span>
+          </div>
+        </div>
+        <div class="chart-wrap">${chartSVG(candles, { height: 280, window: 150, ariaLabel: `${data.symbol} рыночный график` })}</div>
+      </article>
+      <p class="disclaimer">Живой рыночный график, без привязки к сигналу.</p>`;
+    meta.textContent = `${data.symbol} · ${data.granularity}m`;
+  } catch (err) {
+    view.innerHTML = `<a class="backlink" href="#/market">← Рынок</a>
+      <div class="empty"><b>Нет данных по паре</b>${esc(err.message)}</div>`;
+  }
+}
+
 /* ---------------- views ---------------- */
 
 async function renderFeed() {
@@ -320,7 +435,8 @@ async function renderStats() {
     const o = s.overall;
 
     if (!o.trades) {
-      view.innerHTML = `<div class="empty"><b>Статистики пока нет</b>
+      view.innerHTML = `${balanceBlock(s.balance)}
+        <div class="empty"><b>Статистики по сделкам пока нет</b>
         Она появится, когда закроется первая сделка.
         Сейчас в работе: ${o.open_now}.</div>`;
       meta.textContent = `в сделке: ${o.open_now}`;
@@ -328,6 +444,7 @@ async function renderStats() {
     }
 
     view.innerHTML = `
+      ${balanceBlock(s.balance)}
       <div class="section-title">Итого</div>
       <div class="tiles">
         ${tile('Сделок', o.trades)}
@@ -359,14 +476,17 @@ async function renderStats() {
 function route() {
   const hash = location.hash || '#/';
   const detail = hash.match(/^#\/signal\/(\d+)$/);
+  const marketDetail = hash.match(/^#\/market\/(.+)$/);
 
   document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-  const active = hash.startsWith('#/stats') ? 'stats' : 'feed';
+  const active = hash.startsWith('#/stats') ? 'stats' : hash.startsWith('#/market') ? 'market' : 'feed';
   const tab = document.querySelector(`.tab[data-tab="${active}"]`);
   if (tab) tab.classList.add('active');
 
   window.scrollTo(0, 0);
   if (detail) return renderDetail(detail[1]);
+  if (marketDetail) return renderMarketDetail(decodeURIComponent(marketDetail[1]));
+  if (hash.startsWith('#/market')) return renderMarket();
   if (hash.startsWith('#/stats')) return renderStats();
   return renderFeed();
 }
