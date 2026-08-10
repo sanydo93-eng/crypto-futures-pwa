@@ -214,7 +214,12 @@ class Storage:
         if symbol:
             query += " WHERE s.symbol = ?"
             params.append(symbol)
-        query += " ORDER BY s.created_at DESC LIMIT ? OFFSET ?"
+        # created_at has millisecond resolution, so two signals saved in the
+        # same poll cycle (main.py loops over several symbols back to back)
+        # can tie; id is autoincrement and always reflects insertion order,
+        # so it breaks the tie deterministically instead of leaving "newest
+        # first" up to SQLite's whim.
+        query += " ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?"
         params += [limit, offset]
         # Feed cards draw their own chart, so they need candles — just fewer of
         # them than the detail view, to keep the payload small.
