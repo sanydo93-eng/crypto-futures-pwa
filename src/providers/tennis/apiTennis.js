@@ -1,4 +1,4 @@
-import { PlayerStats } from '../stats.js';
+import { PlayerStats } from '../../tennis/stats.js';
 
 /**
  * Провайдер api-tennis.com: расписание + коэффициенты.

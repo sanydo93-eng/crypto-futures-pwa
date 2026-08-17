@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { evaluateMatch, modelMatch } from '../src/signals.js';
-import * as mock from '../src/providers/mock.js';
+import { evaluateMatch, modelMatch } from '../src/tennis/signals.js';
+import * as mock from '../src/providers/tennis/mock.js';
 
 const baseMatch = {
   id: 't1',

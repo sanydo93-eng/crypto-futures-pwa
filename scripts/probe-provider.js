@@ -9,15 +9,15 @@
  *   API_TENNIS_KEY=... node scripts/probe-provider.js
  */
 import { loadConfig } from '../src/config.js';
-import { createProvider } from '../src/providers/index.js';
-import { evaluateMatch } from '../src/signals.js';
+import { createTennisProvider } from '../src/providers/index.js';
+import { evaluateMatch } from '../src/tennis/signals.js';
 
 const config = loadConfig();
-if (config.provider === 'mock') {
+if (config.tennis.provider === 'mock') {
   console.log('PROVIDER=mock — проверять нечего. Запусти с PROVIDER=api-tennis и ключом.\n');
 }
 
-const provider = createProvider(config);
+const provider = createTennisProvider(config);
 const matches = await provider.fetchMatches();
 
 console.log(`Провайдер: ${provider.name}`);

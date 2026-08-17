@@ -1,0 +1,36 @@
+# systemd-юнит: приложение поднимается само после перезагрузки сервера.
+#
+#   sudo cp deploy/signals.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now signals
+#   systemctl status signals
+#   journalctl -u signals -f        # логи
+#
+# Путь и пользователя поправь под себя.
+
+[Unit]
+Description=Сигналы: теннис и футбол
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/signals
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+
+# Ключи и настройки берутся из .env рядом с приложением.
+# Файл должен быть доступен только владельцу: chmod 600 /opt/signals/.env
+EnvironmentFile=/opt/signals/.env
+
+# Приложению не нужны ни root, ни запись куда-либо кроме своего каталога.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/signals/data
+
+[Install]
+WantedBy=multi-user.target

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { devig, edge, kelly } from '../src/odds.js';
-import { shrink, normalizeName } from '../src/stats.js';
+import { shrink, normalizeName } from '../src/tennis/stats.js';
 
 const close = (actual, expected, tolerance = 1e-9) =>
   assert.ok(

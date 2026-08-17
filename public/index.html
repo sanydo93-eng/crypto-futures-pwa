@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Теннис — сигналы на точный счёт</title>
+<title>Сигналы: теннис и футбол</title>
 <meta name="theme-color" content="#0f1720">
-<meta name="description" content="Модель точного счёта в теннисе и сравнение с коэффициентами">
+<meta name="description" content="Модели точного счёта в теннисе и гола в первом тайме в футболе">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -16,18 +16,23 @@
 <body>
 <header class="top">
   <div class="top__row">
-    <h1 class="top__title">Точный счёт</h1>
-    <button id="refresh" class="button" type="button" aria-label="Обновить">Обновить</button>
+    <h1 class="top__title">Сигналы</h1>
+    <button id="refresh" class="button" type="button">Обновить</button>
   </div>
   <p class="top__meta">
     <span id="provider" class="badge">—</span>
     <span id="updated" class="muted">загрузка…</span>
   </p>
+  <nav class="tabs" role="tablist">
+    <button class="tab tab--active" data-tab="tennis" role="tab">Теннис</button>
+    <button class="tab" data-tab="football" role="tab">Футбол</button>
+    <button class="tab" data-tab="stats" role="tab">Статистика</button>
+  </nav>
 </header>
 
 <div id="banner" class="banner" hidden></div>
 
-<nav class="filters" aria-label="Фильтры">
+<nav class="filters" id="filters" aria-label="Фильтры">
   <label class="filter">
     <input type="checkbox" id="only-signals" checked>
     <span>Только сигналы</span>
@@ -38,16 +43,20 @@
   </label>
 </nav>
 
+<nav class="filters" id="stats-controls" aria-label="Статистика" hidden>
+  <div class="segmented" role="group">
+    <button class="segmented__item segmented__item--active" data-stats-sport="tennis">Игроки</button>
+    <button class="segmented__item" data-stats-sport="football">Команды</button>
+  </div>
+  <input type="search" id="stats-search" class="search" placeholder="Поиск по имени" autocomplete="off">
+</nav>
+
 <main id="content" class="content" aria-live="polite">
   <p class="muted content__placeholder">Загрузка…</p>
 </main>
 
 <footer class="foot">
-  <p class="muted">
-    Модель считает точный счёт из вероятности выигрыша очка на подаче
-    (цепь Маркова по очкам). Преимущество — это оценка модели, а не гарантия:
-    маржа на этом рынке 15–25%, и ошибка модели съедается ею быстрее всего.
-  </p>
+  <p class="muted" id="foot-note"></p>
 </footer>
 
 <script src="/app.js" type="module"></script>

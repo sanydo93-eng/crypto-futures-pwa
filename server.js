@@ -4,8 +4,12 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadConfig } from './src/config.js';
-import { createProvider } from './src/providers/index.js';
-import { evaluateAll } from './src/signals.js';
+import { createTennisProvider, createFootballProvider } from './src/providers/index.js';
+import { evaluateAll } from './src/tennis/signals.js';
+import { evaluateAllFixtures } from './src/football/signals.js';
+import { PlayerStats } from './src/tennis/stats.js';
+import { TeamStrengths, buildStrengths } from './src/football/strength.js';
+import { demoHistory } from './src/providers/football/mock.js';
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -26,31 +30,145 @@ const MIME = {
 const NO_CACHE = new Set(['/sw.js', '/manifest.webmanifest']);
 
 const config = loadConfig();
-const provider = createProvider(config);
+const tennisProvider = createTennisProvider(config);
+const footballProvider = createFootballProvider(config);
 
-let cache = { at: 0, payload: null };
+/* ------------------------------------------------------------------ */
+/* Справочники статистики                                              */
+/* ------------------------------------------------------------------ */
 
-async function buildPayload() {
-  const matches = await provider.fetchMatches();
+let tennisStatsPromise;
+let footballStrengthsPromise;
+
+const getTennisStats = () => (tennisStatsPromise ??= PlayerStats.load(config.tennis.statsPath));
+
+/**
+ * Рейтинги команд. Если справочник ещё не собран, демо-режим строит его из
+ * синтетической истории — раздел статистики должен быть наполнен сразу,
+ * а не пустовать до первого запуска скрипта сборки.
+ */
+const getFootballStrengths = () =>
+  (footballStrengthsPromise ??= TeamStrengths.load(config.football.statsPath).then((loaded) => {
+    if (loaded) return { strengths: loaded, synthetic: false };
+    if (config.football.provider !== 'mock') return { strengths: null, synthetic: false };
+    return {
+      strengths: buildStrengths(demoHistory(), { competition: 'Демо-лига' }),
+      synthetic: true,
+    };
+  }));
+
+/* ------------------------------------------------------------------ */
+/* Сигналы                                                             */
+/* ------------------------------------------------------------------ */
+
+const cache = new Map();
+
+async function buildTennis() {
+  const matches = await tennisProvider.fetchMatches();
   const evaluated = evaluateAll(matches, config.scoring);
+  return { sport: 'tennis', provider: tennisProvider.name, matches: evaluated };
+}
 
-  return {
+async function buildFootball() {
+  const [fixtures, { strengths }] = await Promise.all([
+    footballProvider.fetchFixtures(),
+    getFootballStrengths(),
+  ]);
+  const evaluated = evaluateAllFixtures(fixtures, config.scoring, strengths);
+  return { sport: 'football', provider: footballProvider.name, matches: evaluated };
+}
+
+const BUILDERS = { tennis: buildTennis, football: buildFootball };
+
+async function getSignals(sport, { force = false } = {}) {
+  const entry = cache.get(sport);
+  if (!force && entry && Date.now() - entry.at < config.cacheTtlMs) return entry.payload;
+
+  const built = await BUILDERS[sport]();
+  const payload = {
+    ...built,
     generatedAt: new Date().toISOString(),
-    provider: provider.name,
     settings: config.scoring,
-    matches: evaluated,
-    signalCount: evaluated.reduce((sum, m) => sum + m.signals.length, 0),
+    signalCount: built.matches.reduce((sum, m) => sum + m.signals.length, 0),
+  };
+
+  cache.set(sport, { at: Date.now(), payload });
+  return payload;
+}
+
+/* ------------------------------------------------------------------ */
+/* Статистика                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Пока архив по игрокам не собран, показываем статистику участников
+ * сегодняшних матчей — она приходит вместе с котировками.
+ */
+async function tennisStatsFallback(query) {
+  const matches = await tennisProvider.fetchMatches();
+  const needle = query.toLowerCase();
+
+  return matches
+    .flatMap((match) => [match.players.a, match.players.b].map((p) => ({ ...p, tour: match.tour })))
+    .filter((p) => !needle || p.name.toLowerCase().includes(needle))
+    .map((p) => ({
+      name: p.name,
+      tour: p.tour,
+      spw: p.spw,
+      rpw: p.rpw,
+      matches: p.matches ?? null,
+      combined: p.spw + p.rpw,
+    }))
+    .sort((a, b) => b.combined - a.combined);
+}
+
+async function getStats(sport, query) {
+  if (sport === 'tennis') {
+    const stats = await getTennisStats();
+    if (stats.size > 0) {
+      return {
+        sport,
+        source: 'archive',
+        total: stats.size,
+        rows: stats.table({ query, limit: 200 }),
+      };
+    }
+    return {
+      sport,
+      source: 'fixtures',
+      note: 'Архив по игрокам не собран — показаны участники ближайших матчей. '
+        + 'Собрать: node scripts/build-stats.js --from 2021 --to 2025',
+      rows: await tennisStatsFallback(query),
+    };
+  }
+
+  const { strengths, synthetic } = await getFootballStrengths();
+  if (!strengths) {
+    return {
+      sport,
+      source: 'none',
+      note: 'Справочник команд не собран. Собрать: node scripts/build-football-stats.js --league E0',
+      rows: [],
+    };
+  }
+
+  const needle = query.toLowerCase();
+  return {
+    sport,
+    source: synthetic ? 'synthetic' : 'archive',
+    note: synthetic
+      ? 'Демо-данные: синтетическая история. Реальные: node scripts/build-football-stats.js --league E0'
+      : undefined,
+    competition: strengths.competition,
+    league: strengths.league,
+    total: strengths.size,
+    rows: strengths.table().filter((row) => !needle || row.name.toLowerCase().includes(needle)),
   };
 }
 
-async function getPayload({ force = false } = {}) {
-  const fresh = Date.now() - cache.at < config.cacheTtlMs;
-  if (!force && fresh && cache.payload) return cache.payload;
-
-  const payload = await buildPayload();
-  cache = { at: Date.now(), payload };
-  return payload;
-}
+/* ------------------------------------------------------------------ */
+/* HTTP                                                                */
+/* ------------------------------------------------------------------ */
 
 function sendJson(res, status, body) {
   const text = JSON.stringify(body);
@@ -92,18 +210,32 @@ async function serveStatic(res, urlPath) {
   }
 }
 
+const sportOf = (url) => {
+  const sport = url.searchParams.get('sport') ?? 'tennis';
+  return sport === 'football' ? 'football' : 'tennis';
+};
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
   try {
     if (url.pathname === '/api/health') {
-      sendJson(res, 200, { ok: true, provider: provider.name });
+      sendJson(res, 200, {
+        ok: true,
+        providers: { tennis: tennisProvider.name, football: footballProvider.name },
+      });
       return;
     }
 
     if (url.pathname === '/api/signals') {
-      const payload = await getPayload({ force: url.searchParams.get('refresh') === '1' });
-      sendJson(res, 200, payload);
+      sendJson(res, 200, await getSignals(sportOf(url), {
+        force: url.searchParams.get('refresh') === '1',
+      }));
+      return;
+    }
+
+    if (url.pathname === '/api/stats') {
+      sendJson(res, 200, await getStats(sportOf(url), url.searchParams.get('q') ?? ''));
       return;
     }
 
@@ -120,8 +252,10 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(config.port, config.host, () => {
-  console.log(`Сигналы на http://${config.host}:${config.port}/  (провайдер: ${provider.name})`);
-  if (config.provider === 'mock') {
-    console.log('Работают демо-данные. Боевой фид: PROVIDER=api-tennis API_TENNIS_KEY=...');
+  console.log(`Сигналы на http://${config.host}:${config.port}/`);
+  console.log(`  теннис:  ${tennisProvider.name}`);
+  console.log(`  футбол:  ${footballProvider.name}`);
+  if (config.tennis.provider === 'mock') {
+    console.log('Демо-данные. Боевой фид: PROVIDER=api-tennis API_TENNIS_KEY=...');
   }
 });

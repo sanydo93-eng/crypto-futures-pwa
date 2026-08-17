@@ -14,6 +14,9 @@
 
 * { box-sizing: border-box; }
 
+/* Атрибут hidden обязан побеждать любые display из правил ниже. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -216,7 +219,7 @@ output { color: var(--accent); font-variant-numeric: tabular-nums; }
 .edge--pos { color: var(--good); }
 .edge--neg { color: var(--muted); }
 
-.stake { font-size: 12px; color: var(--warn); }
+.stake { display: block; font-size: 12px; color: var(--warn); }
 
 .empty {
   padding: 14px;
@@ -236,3 +239,113 @@ output { color: var(--accent); font-variant-numeric: tabular-nums; }
 @media (min-width: 700px) {
   .content, .filters, .top, .foot { max-width: 720px; margin-inline: auto; }
 }
+
+/* ---------- вкладки ---------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tab {
+  flex: 1;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- переключатель и поиск ---------- */
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.segmented__item {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.segmented__item--active { background: var(--surface-2); color: var(--text); font-weight: 600; }
+
+.search {
+  flex: 1 1 140px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.search::placeholder { color: var(--muted); }
+
+/* ---------- таблица статистики ---------- */
+
+.stats {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.stats__row {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, minmax(52px, auto));
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+.stats__row:last-child { border-bottom: 0; }
+
+.stats__row--head {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats__cell { text-align: right; }
+
+.note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.card__tags .warn { color: var(--warn); }

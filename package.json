@@ -1,7 +1,7 @@
 {
-  "name": "tennis-signals-pwa",
-  "version": "0.1.0",
-  "description": "Модель точного счёта в теннисе и сигналы по расхождению с коэффициентами",
+  "name": "signals-pwa",
+  "version": "0.2.0",
+  "description": "Модели точного счёта в теннисе и гола в первом тайме в футболе, сигналы по расхождению с коэффициентами",
   "type": "module",
   "private": true,
   "engines": {
@@ -12,6 +12,7 @@
     "test": "node --test \"test/**/*.test.js\"",
     "icons": "node scripts/generate-icons.js",
     "stats": "node scripts/build-stats.js",
+    "stats:football": "node scripts/build-football-stats.js",
     "probe": "node scripts/probe-provider.js"
   }
 }

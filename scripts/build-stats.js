@@ -16,6 +16,8 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
+import { parseCsv } from '../src/csv.js';
+
 const SOURCES = {
   atp: 'https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_%YEAR%.csv',
   wta: 'https://raw.githubusercontent.com/JeffSackmann/tennis_wta/master/wta_matches_%YEAR%.csv',
@@ -39,35 +41,6 @@ function parseArgs(argv) {
     else if (key === 'out') args.out = value;
   }
   return args;
-}
-
-/** Минимальный разбор CSV с поддержкой полей в кавычках. */
-function parseCsv(text) {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let quoted = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (quoted) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else quoted = false;
-      } else field += ch;
-      continue;
-    }
-    if (ch === '"') quoted = true;
-    else if (ch === ',') { row.push(field); field = ''; }
-    else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-    else if (ch !== '\r') field += ch;
-  }
-  if (field !== '' || row.length) { row.push(field); rows.push(row); }
-
-  const header = rows.shift();
-  return rows
-    .filter((r) => r.length === header.length)
-    .map((r) => Object.fromEntries(header.map((h, i) => [h, r[i]])));
 }
 
 function emptyTally() {
@@ -194,7 +167,7 @@ async function main() {
   await writeFile(args.out, JSON.stringify(payload, null, 1));
 
   console.log(`\nИгроков: ${Object.keys(output.players).length}`);
-  console.log('Базовые уровни подачи (перенеси их в src/model/serve.js):');
+  console.log('Базовые уровни подачи (перенеси их в src/tennis/serve.js):');
   console.dir(baselines, { depth: null });
   console.log(`Записано: ${args.out}`);
 }

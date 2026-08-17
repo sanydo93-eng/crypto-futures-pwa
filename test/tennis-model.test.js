@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { gameWinProbability } from '../src/model/game.js';
-import { tiebreakWinProbability } from '../src/model/tiebreak.js';
-import { setDistribution } from '../src/model/set.js';
-import { matchDistribution } from '../src/model/match.js';
-import { serveProbabilities } from '../src/model/serve.js';
+import { gameWinProbability } from '../src/tennis/game.js';
+import { tiebreakWinProbability } from '../src/tennis/tiebreak.js';
+import { setDistribution } from '../src/tennis/set.js';
+import { matchDistribution } from '../src/tennis/match.js';
+import { serveProbabilities } from '../src/tennis/serve.js';
 
 const close = (actual, expected, tolerance = 1e-9) =>
   assert.ok(

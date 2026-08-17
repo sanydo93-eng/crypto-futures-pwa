@@ -7,9 +7,17 @@ export function loadConfig(env = process.env) {
   return {
     port: num(env.PORT, 8100),
     host: env.HOST ?? '0.0.0.0', // наружу по умолчанию, иначе с телефона не открыть
-    provider: env.PROVIDER ?? 'mock',
-    apiKey: env.API_TENNIS_KEY ?? '',
-    statsPath: env.STATS_PATH ?? 'data/player-stats.json',
+
+    tennis: {
+      provider: env.PROVIDER ?? 'mock',
+      apiKey: env.API_TENNIS_KEY ?? '',
+      statsPath: env.STATS_PATH ?? 'data/player-stats.json',
+    },
+    football: {
+      provider: env.FOOTBALL_PROVIDER ?? 'mock',
+      statsPath: env.FOOTBALL_STATS_PATH ?? 'data/football-E0.json',
+    },
+
     cacheTtlMs: num(env.CACHE_TTL_MS, 120_000),
     scoring: {
       minEdge: num(env.MIN_EDGE, 0.05),
