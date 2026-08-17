@@ -27,8 +27,10 @@ const clamp = (x, lo = 0.3, hi = 0.9) => Math.min(hi, Math.max(lo, x));
  * @param {{tour?: 'atp'|'wta', surface?: string}} context
  */
 export function serveProbabilities(a, b, context = {}) {
-  const { tour = 'atp', surface = 'hard' } = context;
-  const base = SURFACE_BASELINE[tour]?.[surface] ?? SURFACE_BASELINE.atp.hard;
+  const { tour = 'atp', surface = 'hard', baseline } = context;
+  // Явно переданный базовый уровень важнее зашитого: бэктест считает его
+  // по той же выборке, на которой проверяется, а не берёт из констант.
+  const base = baseline ?? SURFACE_BASELINE[tour]?.[surface] ?? SURFACE_BASELINE.atp.hard;
   const baseReturn = 1 - base;
 
   return {

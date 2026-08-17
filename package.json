@@ -13,6 +13,7 @@
     "icons": "node scripts/generate-icons.js",
     "stats": "node scripts/build-stats.js",
     "stats:football": "node scripts/build-football-stats.js",
+    "backtest": "node scripts/backtest.js",
     "probe": "node scripts/probe-provider.js"
   }
 }
