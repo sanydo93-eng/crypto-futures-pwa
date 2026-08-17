@@ -155,6 +155,18 @@ async function main() {
     output.players[record.name] = { tour: record.tour, overall, surfaces };
   }
 
+  // Пустой справочник хуже отсутствующего: он выглядит собранным, молча
+  // делает всех игроков средними и никогда не пересобирается.
+  const collected = Object.keys(output.players).length;
+  if (collected === 0) {
+    console.error('\nНи одного игрока не собрано — файл НЕ записан.');
+    console.error('Обычные причины:');
+    console.error('  - нет доступа к raw.githubusercontent.com;');
+    console.error('  - указанные годы ещё не опубликованы в архиве.');
+    console.error('Проверь: curl -sSI https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_2023.csv');
+    process.exit(1);
+  }
+
   const payload = {
     generatedAt: new Date().toISOString(),
     source: 'JeffSackmann/tennis_atp + tennis_wta',

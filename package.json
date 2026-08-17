@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "launch": "node scripts/launch.js",
     "test": "node --test \"test/**/*.test.js\"",
     "icons": "node scripts/generate-icons.js",
     "stats": "node scripts/build-stats.js",
