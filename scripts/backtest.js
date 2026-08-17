@@ -20,7 +20,8 @@
  *   node scripts/backtest.js --tour atp --from 2021 --to 2025
  *   node scripts/backtest.js --tour wta --surface clay --half-life-days 200
  */
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
 import { parseCsv } from '../src/csv.js';
 import { runBacktest } from '../src/backtest/engine.js';
@@ -28,6 +29,9 @@ import {
   brier, logLoss, multiclassLogLoss, skillScore,
   calibration, calibrationError, outcomeFrequencies,
 } from '../src/backtest/metrics.js';
+import {
+  fitPlatt, fitTemperature, applyPlatt, applyTemperature,
+} from '../src/calibration.js';
 
 const SOURCES = {
   atp: 'https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_%YEAR%.csv',
@@ -50,6 +54,10 @@ function parseArgs(argv) {
     // тянуть десятки мегабайт, а на сервере без доступа наружу это
     // единственный способ.
     file: null,
+    // Доля выборки на обучение поправки. Остальное — честная проверка:
+    // обучать и проверять на одних данных бессмысленно.
+    calibrationSplit: 0.5,
+    saveCalibration: null,
   };
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i]?.replace(/^--/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
@@ -241,6 +249,102 @@ for (const row of outcomeFrequencies(predictions.firstSetScore)) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Поправка вероятностей                                               */
+/* ------------------------------------------------------------------ */
+
+const split = (rows) => {
+  const cut = Math.floor(rows.length * args.calibrationSplit);
+  return { train: rows.slice(0, cut), test: rows.slice(cut) };
+};
+
+const winner = split(predictions.matchWinner);
+const matchScore = split(predictions.matchScore);
+const firstSet = split(predictions.firstSetScore);
+
+let helps = false;
+const fitted = {
+  winner: fitPlatt(winner.train),
+  matchScore: fitTemperature(matchScore.train),
+  firstSetScore: fitTemperature(firstSet.train),
+};
+
+console.log('\n' + '='.repeat(64));
+console.log('ПОПРАВКА ВЕРОЯТНОСТЕЙ');
+console.log('='.repeat(64));
+console.log(`  Обучение: ${winner.train.length} матчей, проверка: ${winner.test.length}`);
+
+if (!fitted.winner.fitted) {
+  console.log('  Выборки не хватает — поправка не подбиралась.');
+} else {
+  const direction = fitted.winner.a > 1 ? 'недоуверенной' : 'переуверенной';
+  console.log(`  Платт: a=${num(fitted.winner.a, 3)}, b=${num(fitted.winner.b, 3)}`);
+  console.log(`    a ${fitted.winner.a > 1 ? '>' : '<'} 1 — модель была ${direction}.`);
+  console.log(`  Температура счёта матча:  ${num(fitted.matchScore.temperature, 3)}`);
+  console.log(`  Температура счёта сета:   ${num(fitted.firstSetScore.temperature, 3)}`);
+
+  const before = winner.test;
+  const after = before.map((row) => ({ ...row, p: applyPlatt(row.p, fitted.winner) }));
+
+  const scoreBefore = matchScore.test;
+  const scoreAfter = scoreBefore.map((row) => ({
+    ...row,
+    probs: applyTemperature(row.probs, fitted.matchScore.temperature),
+  }));
+
+  console.log('\n  На проверочной половине (её поправка не видела):');
+  console.log('                          было      стало');
+  console.log(`    Брайер:            ${num(brier(before))}    ${num(brier(after))}`);
+  console.log(`    Лог-потеря:        ${num(logLoss(before))}    ${num(logLoss(after))}`);
+  console.log(`    Ошибка калибровки: ${pct(calibrationError(before)).padStart(6)}    ${pct(calibrationError(after)).padStart(6)}`);
+  console.log(`    Счёт, лог-потеря:  ${num(multiclassLogLoss(scoreBefore))}    ${num(multiclassLogLoss(scoreAfter))}`);
+
+  // Решение принимается по лог-потере: это строгое правило оценки, его нельзя
+  // улучшить, сместив прогнозы, — в отличие от одной лишь ошибки калибровки.
+  const lossGain = logLoss(before) - logLoss(after);
+  helps = lossGain > 1e-4;
+
+  if (helps) {
+    console.log(`\n  Поправка помогает: лог-потеря ниже на ${num(lossGain)},`);
+    console.log(`  ошибка калибровки ${pct(calibrationError(before))} -> ${pct(calibrationError(after))}.`);
+  } else if (lossGain < -1e-4) {
+    console.log(`\n  ПОПРАВКА ВРЕДИТ: лог-потеря выросла на ${num(-lossGain)}.`);
+    console.log('  Значит расхождение на обучающей половине было шумом, а не смещением,');
+    console.log('  и поправка выучила именно шум. Сохранять её нельзя.');
+  } else {
+    console.log('\n  Поправка ничего не меняет — модель и так откалибрована.');
+  }
+
+  // Упор в границу поиска означает вырожденное распределение, а не находку.
+  for (const [name, result] of [['счёта матча', fitted.matchScore], ['счёта сета', fitted.firstSetScore]]) {
+    if (result.temperature < 0.32 || result.temperature > 2.9) {
+      console.log(`  Внимание: температура ${name} упёрлась в границу (${num(result.temperature, 2)}).`);
+      console.log('  Обычно это признак вырожденных данных, а не реального смещения.');
+    }
+  }
+}
+
+const force = process.argv.includes('--force-calibration');
+
+if (args.saveCalibration && !helps && !force) {
+  console.log('\n  Поправка НЕ сохранена: на проверке она не улучшила прогноз.');
+  console.log('  Сохранить принудительно: --force-calibration');
+} else if (args.saveCalibration) {
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    tour: args.tour,
+    surface: args.surface,
+    sample: { train: winner.train.length, test: winner.test.length },
+    winner: { a: fitted.winner.a, b: fitted.winner.b },
+    matchScore: { temperature: fitted.matchScore.temperature },
+    firstSetScore: { temperature: fitted.firstSetScore.temperature },
+  };
+  await mkdir(dirname(args.saveCalibration), { recursive: true });
+  await writeFile(args.saveCalibration, JSON.stringify(payload, null, 1));
+  console.log(`\n  Записано: ${args.saveCalibration}`);
+  console.log(`  Подключение: TENNIS_CALIBRATION_PATH=${args.saveCalibration}`);
+}
+
 console.log('\n' + '='.repeat(64));
 console.log('Как читать результат:');
 console.log('  - Брайер заметно ниже 0.25 и навык выше нуля — модель несёт информацию.');
@@ -249,3 +353,5 @@ console.log('    съест маржа быстрее, чем она успее�
 console.log('  - В таблицах счетов важно совпадение колонок «предсказано» и');
 console.log('    «наблюдалось» по КАЖДОЙ строке, а не в сумме.');
 console.log('  - Прибыльность это не измеряет: нужен архив котировок.');
+console.log('  - Поправку стоит сохранять и подключать к боевому расчёту:');
+console.log('      npm run backtest -- --save-calibration data/tennis-calibration.json');

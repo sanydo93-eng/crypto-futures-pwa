@@ -38,9 +38,21 @@ const footballProvider = createFootballProvider(config);
 /* ------------------------------------------------------------------ */
 
 let tennisStatsPromise;
+let tennisCalibrationPromise;
 let footballStrengthsPromise;
 
 const getTennisStats = () => (tennisStatsPromise ??= PlayerStats.load(config.tennis.statsPath));
+
+/**
+ * Поправка вероятностей. Её отсутствие — нормальный режим: пока бэктест не
+ * доказал, что поправка помогает на отложенной выборке, модель работает как есть.
+ */
+const getTennisCalibration = () => (tennisCalibrationPromise ??= readFile(
+  config.tennis.calibrationPath, 'utf8',
+).then(JSON.parse).catch((err) => {
+  if (err.code !== 'ENOENT') console.warn('Поправка не прочитана:', err.message);
+  return null;
+}));
 
 /**
  * Рейтинги команд. Если справочник ещё не собран, демо-режим строит его из
@@ -64,9 +76,18 @@ const getFootballStrengths = () =>
 const cache = new Map();
 
 async function buildTennis() {
-  const matches = await tennisProvider.fetchMatches();
-  const evaluated = evaluateAll(matches, config.scoring);
-  return { sport: 'tennis', provider: tennisProvider.name, matches: evaluated };
+  const [matches, calibration] = await Promise.all([
+    tennisProvider.fetchMatches(),
+    getTennisCalibration(),
+  ]);
+
+  const evaluated = evaluateAll(matches, { ...config.scoring, calibration });
+  return {
+    sport: 'tennis',
+    provider: tennisProvider.name,
+    matches: evaluated,
+    calibrated: Boolean(calibration),
+  };
 }
 
 async function buildFootball() {

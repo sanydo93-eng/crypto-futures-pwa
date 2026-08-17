@@ -12,6 +12,9 @@ export function loadConfig(env = process.env) {
       provider: env.PROVIDER ?? 'mock',
       apiKey: env.API_TENNIS_KEY ?? '',
       statsPath: env.STATS_PATH ?? 'data/player-stats.json',
+      // Поправка вероятностей, подобранная бэктестом:
+      //   npm run backtest -- --save-calibration data/tennis-calibration.json
+      calibrationPath: env.TENNIS_CALIBRATION_PATH ?? 'data/tennis-calibration.json',
     },
     football: {
       provider: env.FOOTBALL_PROVIDER ?? 'mock',

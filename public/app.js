@@ -11,6 +11,8 @@ const els = {
   minEdge: document.getElementById('min-edge'),
   edgeValue: document.getElementById('edge-value'),
   footNote: document.getElementById('foot-note'),
+  preview: document.getElementById('preview'),
+  previewBody: document.getElementById('preview-body'),
   tabs: [...document.querySelectorAll('.tab')],
   statsSports: [...document.querySelectorAll('[data-stats-sport]')],
 };
@@ -132,7 +134,132 @@ function progressBar(share) {
   return bar;
 }
 
+
+/* ---------- предпросмотр матча ---------- */
+
+function comparisonRow(row, isSignal) {
+  const node = element('div', `compare__row${isSignal ? ' compare__row--signal' : ''}`);
+
+  // Название рынка не дублируем: строки уже сгруппированы по нему заголовком.
+  node.append(element('div', 'compare__label', outcomeLabel(row.market, row.outcome)));
+
+  // Полосы масштабируются к самому вероятному исходу, иначе на редких
+  // счетах обе полосы вырождаются в точку и сравнивать нечего.
+  const bars = element('div', 'compare__bars');
+  for (const [kind, value] of [['model', row.modelProb], ['market', row.marketProb]]) {
+    const track = element('div', 'compare__track');
+    const fill = element('div', `compare__fill compare__fill--${kind}`);
+    fill.style.width = `${Math.min(100, (value / row.scale) * 100).toFixed(1)}%`;
+    track.append(fill);
+    bars.append(track);
+  }
+  node.append(bars);
+
+  const numbers = element('div', 'compare__numbers');
+  numbers.append(element('span', 'compare__edge', signed(row.edge)));
+  numbers.append(element('span', null, `кэф ${decimal(row.marketOdds)}`));
+  node.append(numbers);
+
+  return node;
+}
+
+function previewFacts(entry) {
+  const facts = element('div', 'preview__facts');
+  const add = (text) => facts.append(element('span', null, text));
+
+  if (entry.sport === 'tennis') {
+    add(`${entry.match.tournament}`);
+    add(`подача ${percent(entry.model.pA, 0)} / ${percent(entry.model.pB, 0)}`);
+    add(`победа ${percent(entry.model.aWins, 0)}`);
+    if (entry.model.calibrated) add('поправка применена');
+  } else {
+    add(`${entry.match.competition}`);
+    add(`xG 1Т ${decimal(entry.model.lambdaHome)} : ${decimal(entry.model.lambdaAway)}`);
+    add(`гол ${percent(entry.model.goalChance, 0)}`);
+    if (!entry.match.knownTeams) add('команды не в справочнике');
+  }
+  return facts;
+}
+
+function renderPreview(entry) {
+  const names = entry.sport === 'tennis' ? entry.match.players : entry.match.teams;
+  const body = element('div');
+
+  const head = element('div', 'preview__head');
+  head.append(element('h2', 'preview__title', `${names[0]} — ${names[1]}`));
+
+  const close = element('button', 'preview__close', '\u00d7');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Закрыть');
+  close.addEventListener('click', () => els.preview.close());
+  head.append(close);
+
+  body.append(head, previewFacts(entry));
+
+  const signalKeys = new Set(entry.signals.map((s) => `${s.market}:${s.outcome}`));
+
+  // Рынки показываются целиком, включая невыгодные: смысл предпросмотра —
+  // увидеть, где модель расходится с рынком, а не только отобранные сигналы.
+  const byMarket = new Map();
+  for (const row of entry.markets) {
+    if (!byMarket.has(row.market)) byMarket.set(row.market, []);
+    byMarket.get(row.market).push(row);
+  }
+
+  if (byMarket.size === 0) {
+    body.append(element('p', 'preview__note', 'Котировок по этому матчу нет.'));
+  }
+
+  for (const [market, rows] of byMarket) {
+    body.append(element('div', 'preview__section', MARKET_LABELS[market] ?? market));
+
+    const legend = element('div', 'legend');
+    legend.append(element('span', 'legend--model', 'модель'));
+    legend.append(element('span', 'legend--market', 'рынок'));
+    body.append(legend);
+
+    const scale = Math.max(...rows.map((r) => Math.max(r.modelProb, r.marketProb)), 0.01);
+    const list = element('div', 'compare');
+    for (const row of [...rows].sort((a, b) => b.modelProb - a.modelProb)) {
+      list.append(comparisonRow({ ...row, scale }, signalKeys.has(`${row.market}:${row.outcome}`)));
+    }
+    body.append(list);
+  }
+
+  const overround = entry.markets[0]?.overround;
+  if (overround != null) {
+    body.append(element(
+      'p',
+      'preview__note',
+      `Маржа букмекера в этом рынке ${percent(overround)}. Полосы «рынок» показаны `
+      + 'уже без неё — иначе они всегда были бы выше модели.',
+    ));
+  }
+
+  els.previewBody.replaceChildren(body);
+  els.preview.showModal();
+}
+
+// Клик по подложке закрывает окно: на телефоне это привычнее кнопки.
+els.preview.addEventListener('click', (event) => {
+  if (event.target === els.preview) els.preview.close();
+});
+
 /* ---------- карточки ---------- */
+
+/** Карточка открывает разбор и мышью, и с клавиатуры. */
+function makeOpenable(card, entry) {
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.addEventListener('click', () => renderPreview(entry));
+  card.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      renderPreview(entry);
+    }
+  });
+  return card;
+}
 
 function renderTennisCard(entry, filters) {
   const card = element('article', 'card');
@@ -157,7 +284,7 @@ function renderTennisCard(entry, filters) {
   head.append(probs);
 
   card.append(head, renderMarketTable(entry, filters));
-  return card;
+  return makeOpenable(card, entry);
 }
 
 function renderFootballCard(entry, filters) {
@@ -183,7 +310,7 @@ function renderFootballCard(entry, filters) {
   head.append(probs);
 
   card.append(head, renderMarketTable(entry, filters));
-  return card;
+  return makeOpenable(card, entry);
 }
 
 function renderSignalsView(sport) {
