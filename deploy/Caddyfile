@@ -1,0 +1,41 @@
+# Caddy — обратный прокси с автоматическим HTTPS (Let's Encrypt).
+# Это рекомендуемый способ: PWA на телефоне полноценно работает только по HTTPS.
+#
+# Установка на сервере (Debian/Ubuntu):
+#   sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+#   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+#     | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+#   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+#     | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+#   sudo apt update && sudo apt install -y caddy
+#
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   # ЗАМЕНИ example.com на свой домен, направленный A-записью на 5.10.218.52
+#   sudo systemctl reload caddy
+#
+# Требуется: открытые порты 80 и 443 (Caddy сам получит и обновит сертификат).
+
+example.com {
+	encode zstd gzip
+
+	# Приложение остаётся на 8100, наружу торчит только 443.
+	reverse_proxy 127.0.0.1:8100 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Service worker не должен кэшироваться браузером — иначе обновления PWA
+	# не доезжают до телефона.
+	@sw path /sw.js /service-worker.js /manifest.webmanifest /manifest.json
+	header @sw Cache-Control "no-cache, no-store, must-revalidate"
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file /var/log/caddy/access.log
+	}
+}
