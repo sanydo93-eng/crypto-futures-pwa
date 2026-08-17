@@ -33,7 +33,21 @@ npm test          # 120 тестов
 [5] Пробный разбор         разобрано матчей: 12, сигналов: 2
 ```
 
-Порядок на сервере:
+Установка одной командой — на сервере или в Termux на телефоне:
+
+```bash
+git clone https://github.com/sanydo93-eng/crypto-futures-pwa.git
+cd crypto-futures-pwa
+bash deploy/install.sh              # спросит ключ, соберёт данные, запустит
+bash deploy/install.sh --service    # плюс автозапуск через systemd
+bash deploy/install.sh --provider mock   # без ключа, на демо-данных
+```
+
+Скрипт сам проверит Node, создаст `.env` с правами 600, соберёт справочник
+игроков, прогонит тесты и поднимет приложение. Ключ вводится по запросу и не
+попадает ни на экран, ни в историю команд.
+
+Вручную то же самое:
 
 ```bash
 cp .env.example .env && chmod 600 .env

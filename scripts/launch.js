@@ -11,6 +11,7 @@
  *   npm run launch -- --check   # только проверки, без запуска
  */
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { access, readFile } from 'node:fs/promises';
 
 import { loadConfig } from '../src/config.js';
@@ -39,6 +40,15 @@ const run = (command, args) =>
   });
 
 const exists = (path) => access(path).then(() => true, () => false);
+
+/** Свободен ли порт. Пробная привязка — единственная надёжная проверка. */
+const portIsFree = (port, host) =>
+  new Promise((resolve) => {
+    const probe = createServer();
+    probe.once('error', (err) => resolve(err.code !== 'EADDRINUSE'));
+    probe.once('listening', () => probe.close(() => resolve(true)));
+    probe.listen(port, host);
+  });
 
 /* ------------------------------------------------------------------ */
 
@@ -150,6 +160,19 @@ if (signals === 0) {
   warn(`порог сейчас ${(config.scoring.minEdge * 100).toFixed(0)}% (MIN_EDGE)`);
 }
 
+stage('Порт');
+if (await portIsFree(config.port, config.host)) {
+  ok(`${config.host}:${config.port} свободен`);
+} else if (checkOnly) {
+  warn(`${config.port} занят — вероятно, приложение уже работает`);
+} else {
+  fail(`порт ${config.port} занят`, [
+    'если приложение уже запущено службой: sudo systemctl restart signals',
+    `кто занял: ss -tlnp | grep ${config.port}`,
+    'либо выбери другой порт: PORT=8101 npm run launch',
+  ]);
+}
+
 console.log('\n' + '─'.repeat(40));
 
 if (checkOnly) {
@@ -158,4 +181,10 @@ if (checkOnly) {
 }
 
 console.log(`Запускаю сервер на ${config.host}:${config.port}\n`);
-await run(process.execPath, ['server.js']);
+try {
+  await run(process.execPath, ['server.js']);
+} catch (err) {
+  // Сервер уже напечатал свою ошибку; стек запускающего скрипта здесь лишний.
+  console.error(`\nСервер остановился (${err.message}).`);
+  process.exit(1);
+}

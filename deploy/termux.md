@@ -25,9 +25,11 @@ pkg install -y openssh git nodejs-lts
 ```bash
 git clone https://github.com/sanydo93-eng/crypto-futures-pwa.git
 cd crypto-futures-pwa
-npm test          # 64 теста, зависимостей ставить не нужно
-npm start
+bash deploy/install.sh
 ```
+
+Скрипт спросит ключ api-tennis, соберёт справочник игроков, прогонит тесты и
+запустит приложение. Без ключа — `bash deploy/install.sh --provider mock`.
 
 Открой в браузере телефона `http://localhost:8100`. Меню браузера →
 «Установить приложение» — появится иконка на экране.
