@@ -381,6 +381,7 @@ npm run backtest -- --tour atp --from 2021 --to 2025 \
   офлайн с иконкой на экране работают без домена и HTTPS);
 - `deploy/README.md` — доступ снаружи, firewall, HTTPS, конфиги Caddy;
 - `deploy/signals.service` — юнит systemd;
+- `deploy/doctor.sh` — сбор диагностики одной командой, когда что-то не работает;
 - `deploy/diagnose.sh` — диагностика недоступности порта.
 
 ## Структура
