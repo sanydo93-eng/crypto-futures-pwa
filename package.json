@@ -1,0 +1,17 @@
+{
+  "name": "tennis-signals-pwa",
+  "version": "0.1.0",
+  "description": "Модель точного счёта в теннисе и сигналы по расхождению с коэффициентами",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "icons": "node scripts/generate-icons.js",
+    "stats": "node scripts/build-stats.js",
+    "probe": "node scripts/probe-provider.js"
+  }
+}

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Теннис — сигналы на точный счёт</title>
+<meta name="theme-color" content="#0f1720">
+<meta name="description" content="Модель точного счёта в теннисе и сравнение с коэффициентами">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="top__row">
+    <h1 class="top__title">Точный счёт</h1>
+    <button id="refresh" class="button" type="button" aria-label="Обновить">Обновить</button>
+  </div>
+  <p class="top__meta">
+    <span id="provider" class="badge">—</span>
+    <span id="updated" class="muted">загрузка…</span>
+  </p>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<nav class="filters" aria-label="Фильтры">
+  <label class="filter">
+    <input type="checkbox" id="only-signals" checked>
+    <span>Только сигналы</span>
+  </label>
+  <label class="filter filter--range">
+    <span>Порог <output id="edge-value">5%</output></span>
+    <input type="range" id="min-edge" min="0" max="30" step="1" value="5">
+  </label>
+</nav>
+
+<main id="content" class="content" aria-live="polite">
+  <p class="muted content__placeholder">Загрузка…</p>
+</main>
+
+<footer class="foot">
+  <p class="muted">
+    Модель считает точный счёт из вероятности выигрыша очка на подаче
+    (цепь Маркова по очкам). Преимущество — это оценка модели, а не гарантия:
+    маржа на этом рынке 15–25%, и ошибка модели съедается ею быстрее всего.
+  </p>
+</footer>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>

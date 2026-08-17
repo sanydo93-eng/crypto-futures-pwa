@@ -1,0 +1,238 @@
+:root {
+  --bg: #0f1720;
+  --surface: #172230;
+  --surface-2: #1e2c3d;
+  --line: #2a3b4f;
+  --text: #e8eef5;
+  --muted: #8ea3b8;
+  --accent: #d8f24a;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.muted { color: var(--muted); }
+
+/* ---------- шапка ---------- */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.top__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.top__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.top__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.badge {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.button:active { background: var(--surface); }
+.button[disabled] { opacity: 0.5; cursor: default; }
+
+/* ---------- уведомление ---------- */
+
+.banner {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- фильтры ---------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.filter--range { flex: 1 1 180px; }
+.filter--range span { display: flex; gap: 6px; white-space: nowrap; }
+.filter input[type="range"] { flex: 1; min-width: 90px; accent-color: var(--accent); }
+.filter input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+output { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* ---------- карточки ---------- */
+
+.content { padding: 0 16px 32px; }
+.content__placeholder { padding: 32px 0; text-align: center; }
+
+.card {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.card__head { padding: 14px 14px 12px; }
+
+.card__players {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card__vs { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+.card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card__tags span::after { content: " ·"; }
+.card__tags span:last-child::after { content: ""; }
+
+/* Полоса вероятности победы по модели. */
+.odds-bar {
+  display: flex;
+  height: 6px;
+  margin-top: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.odds-bar__fill { background: var(--accent); }
+
+.card__probs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- таблица исходов ---------- */
+
+.rows { border-top: 1px solid var(--line); }
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.row:last-child { border-bottom: 0; }
+.row--signal { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+
+.row__head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.row__score { font-weight: 600; white-space: nowrap; }
+.row__market { display: block; font-size: 11px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+
+.row__cell { text-align: right; min-width: 52px; font-size: 14px; }
+
+.edge { font-weight: 650; }
+.edge--pos { color: var(--good); }
+.edge--neg { color: var(--muted); }
+
+.stake { font-size: 12px; color: var(--warn); }
+
+.empty {
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- подвал ---------- */
+
+.foot {
+  padding: 0 16px 28px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (min-width: 700px) {
+  .content, .filters, .top, .foot { max-width: 720px; margin-inline: auto; }
+}
