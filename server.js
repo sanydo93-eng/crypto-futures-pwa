@@ -74,8 +74,24 @@ async function buildFootball() {
     footballProvider.fetchFixtures(),
     getFootballStrengths(),
   ]);
-  const evaluated = evaluateAllFixtures(fixtures, config.scoring, strengths);
-  return { sport: 'football', provider: footballProvider.name, matches: evaluated };
+
+  // Матч считается либо по заданным ожидаемым голам, либо по справочнику команд.
+  // Без того и другого модель считать нечем — но это не повод ронять эндпоинт.
+  const usable = fixtures.filter(
+    (fixture) => Number.isFinite(fixture.lambdaHome) || Boolean(strengths),
+  );
+
+  const note = usable.length < fixtures.length
+    ? `Пропущено матчей: ${fixtures.length - usable.length}. Справочник команд не собран — `
+      + 'запусти node scripts/build-football-stats.js --league E0'
+    : undefined;
+
+  return {
+    sport: 'football',
+    provider: footballProvider.name,
+    matches: evaluateAllFixtures(usable, config.scoring, strengths),
+    note,
+  };
 }
 
 const BUILDERS = { tennis: buildTennis, football: buildFootball };

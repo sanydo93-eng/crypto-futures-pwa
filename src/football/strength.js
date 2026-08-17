@@ -9,6 +9,8 @@
 
 import { readFile } from 'node:fs/promises';
 
+import { canonicalTeamName, buildNameIndex } from './names.js';
+
 const PERIODS = ['full', 'firstHalf'];
 
 function emptyTeam() {
@@ -36,6 +38,20 @@ export class TeamStrengths {
     this.generatedAt = data.generatedAt ?? null;
     this.competition = data.competition ?? null;
     this.sampleMatches = data.sampleMatches ?? null;
+    // Позволяет находить команду по написанию букмекера, а не только
+    // по тому, которое было в архиве результатов.
+    this.index = buildNameIndex(this.teams.keys());
+  }
+
+  /** Запись команды по любому известному написанию названия. */
+  find(name) {
+    return this.teams.get(name) ?? this.teams.get(this.index.get(canonicalTeamName(name)));
+  }
+
+  /** Как команда называется в справочнике, или null если не найдена. */
+  resolve(name) {
+    if (this.teams.has(name)) return name;
+    return this.index.get(canonicalTeamName(name)) ?? null;
   }
 
   /** Возвращает null, если справочник ещё не собран — вызывающий решает, что делать. */
@@ -64,7 +80,7 @@ export class TeamStrengths {
   }
 
   has(name) {
-    return this.teams.has(name);
+    return this.find(name) !== undefined;
   }
 
   /**
@@ -73,8 +89,8 @@ export class TeamStrengths {
    */
   expectedGoals(homeName, awayName, period = 'firstHalf') {
     const league = this.league[period];
-    const home = this.teams.get(homeName);
-    const away = this.teams.get(awayName);
+    const home = this.find(homeName);
+    const away = this.find(awayName);
 
     // Неизвестная команда получает средний уровень лиги — модель тогда
     // не увидит перекоса и не выдаст ложного преимущества.

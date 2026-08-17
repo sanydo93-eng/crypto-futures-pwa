@@ -16,6 +16,14 @@ export function loadConfig(env = process.env) {
     football: {
       provider: env.FOOTBALL_PROVIDER ?? 'mock',
       statsPath: env.FOOTBALL_STATS_PATH ?? 'data/football-E0.json',
+      betsapiToken: env.BETSAPI_TOKEN ?? '',
+      // Пустой список — брать все лиги. Обычно нужен фильтр: справочник
+      // команд собирается по одной лиге, а BetsAPI отдаёт весь мир сразу.
+      leagues: (env.BETSAPI_LEAGUES ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      maxEvents: num(env.BETSAPI_MAX_EVENTS, 40),
     },
 
     cacheTtlMs: num(env.CACHE_TTL_MS, 120_000),

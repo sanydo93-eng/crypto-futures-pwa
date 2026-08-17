@@ -311,10 +311,12 @@ async function loadSignals(sport, { force = false } = {}) {
     state.signals[sport] = payload;
     localStorage.setItem(`signals:${sport}`, JSON.stringify(payload));
 
+    // Замечание сервера важнее напоминания про демо-режим.
     showBanner(
-      payload.provider.includes('mock')
-        ? 'Демо-данные. Боевой фид задаётся в .env (PROVIDER, API_TENNIS_KEY).'
-        : null,
+      payload.note
+        ?? (payload.provider.includes('mock')
+          ? 'Демо-данные. Боевой фид задаётся в .env (PROVIDER, API_TENNIS_KEY, BETSAPI_TOKEN).'
+          : null),
     );
   } catch (err) {
     const cached = localStorage.getItem(`signals:${sport}`);
