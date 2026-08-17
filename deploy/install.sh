@@ -34,6 +34,15 @@ ROOT="$(pwd)"
 IS_TERMUX=0
 [ -n "${PREFIX:-}" ] && case "$PREFIX" in *com.termux*) IS_TERMUX=1 ;; esac
 
+# Под root sudo не нужен, а на минимальных образах его часто и нет.
+if [ "$(id -u)" = "0" ]; then
+  SUDO=""
+elif command -v sudo >/dev/null 2>&1; then
+  SUDO="sudo"
+else
+  SUDO=""
+fi
+
 # ---------------------------------------------------------------------
 
 step 1 "Проверка окружения"
@@ -140,14 +149,17 @@ if [ "$INSTALL_SERVICE" = 1 ]; then
 
   node scripts/launch.js --check || die "проверки не пройдены, служба не установлена"
 
-  sed "s|/opt/signals|$ROOT|g" deploy/signals.service | sudo tee /etc/systemd/system/signals.service >/dev/null
-  sudo systemctl daemon-reload
-  sudo systemctl enable --now signals
+  # Юнит запускается от www-data; под этим пользователем нужен доступ к каталогу.
+  RUN_USER="$(id -un)"
+  sed -e "s|/opt/signals|$ROOT|g" -e "s|^User=.*|User=$RUN_USER|" deploy/signals.service \
+    | $SUDO tee /etc/systemd/system/signals.service >/dev/null
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl enable --now signals
   ok "служба signals запущена и будет подниматься после перезагрузки"
 
   echo
-  echo "Логи:      journalctl -u signals -f"
-  echo "Перезапуск: sudo systemctl restart signals"
+  echo "Логи:       journalctl -u signals -f"
+  echo "Перезапуск: ${SUDO:+$SUDO }systemctl restart signals"
 else
   exec node scripts/launch.js
 fi
