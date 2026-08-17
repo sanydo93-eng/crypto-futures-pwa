@@ -1,0 +1,31 @@
+# Вариант БЕЗ домена: раздача по голому IP на стандартном порту 80.
+#
+# Зачем, если приложение и так на 8100:
+#   - порт 80 не режут мобильные операторы, в отличие от 8100;
+#   - адрес становится http://5.10.218.52/ без порта — меньше шансов, что
+#     браузер на телефоне поведёт себя неожиданно;
+#   - когда появится домен, достаточно заменить этот файл на deploy/Caddyfile
+#     и HTTPS поднимется сам.
+#
+# Установка:
+#   sudo cp deploy/Caddyfile.ip-only /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# ВАЖНО: `http://` в начале блока обязателен — иначе Caddy попытается получить
+# TLS-сертификат на IP-адрес и не сможет.
+
+http://5.10.218.52 {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:8100 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	# Service worker не кэшируем, иначе обновления не доезжают до телефона.
+	@sw path /sw.js /service-worker.js /manifest.webmanifest /manifest.json
+	header @sw Cache-Control "no-cache, no-store, must-revalidate"
+
+	log {
+		output file /var/log/caddy/access.log
+	}
+}
