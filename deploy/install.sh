@@ -10,12 +10,14 @@ set -euo pipefail
 
 PROVIDER="api-tennis"
 INSTALL_SERVICE=0
+FORCE_NODE=0
 PORT="${PORT:-8100}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --service) INSTALL_SERVICE=1 ;;
     --provider) PROVIDER="${2:-api-tennis}"; shift ;;
+    --install-node) FORCE_NODE=1 ;;
     --port) PORT="${2:-8100}"; shift ;;
     -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "Неизвестный аргумент: $1"; exit 1 ;;
@@ -47,18 +49,62 @@ fi
 
 step 1 "Проверка окружения"
 
-if ! command -v node >/dev/null 2>&1; then
-  if [ "$IS_TERMUX" = 1 ]; then
-    die "Node.js не установлен. Поставь: pkg install -y nodejs-lts"
-  fi
-  die "Node.js не установлен. Поставь Node 20+:
-      curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-      sudo apt install -y nodejs"
+NODE_MAJOR=0
+# Через && нельзя: при отсутствии node вся строка вернёт ненулевой код,
+# и set -e молча оборвёт установку до первого понятного сообщения.
+if command -v node >/dev/null 2>&1; then
+  NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
 fi
 
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-[ "$NODE_MAJOR" -ge 20 ] || die "нужен Node 20+, установлен $(node -v)"
-ok "Node $(node -v)$([ "$IS_TERMUX" = 1 ] && echo ' (Termux)')"
+say_node() { printf '    %s\n' "$1"; }
+
+install_node() {
+  if [ "$IS_TERMUX" = 1 ]; then
+    pkg install -y nodejs-lts || return 1
+    return 0
+  fi
+  command -v apt-get >/dev/null 2>&1 || return 1
+
+  say_node "ставлю Node 22 из NodeSource (это займёт минуту)"
+  # Под root SUDO пуст, и "$SUDO -E bash -" превратилось бы в попытку
+  # выполнить команду "-E". Поэтому две отдельные ветки.
+  if [ -n "$SUDO" ]; then
+    curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO -E bash - >/dev/null 2>&1 || return 1
+  else
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1 || return 1
+  fi
+  $SUDO apt-get install -y nodejs >/dev/null 2>&1 || return 1
+}
+
+if [ "$NODE_MAJOR" -ge 20 ] 2>/dev/null; then
+  ok "Node $(node -v)$([ "$IS_TERMUX" = 1 ] && echo ' (Termux)')"
+else
+  if [ "$NODE_MAJOR" = "0" ]; then
+    warn "Node.js не установлен"
+  else
+    # В репозиториях Ubuntu лежит Node 18, а он снят с поддержки.
+    warn "установлен Node $(node -v), нужен 20 или новее"
+  fi
+
+  DO_INSTALL="$FORCE_NODE"
+  if [ "$DO_INSTALL" = 0 ]; then
+    printf '    Поставить Node 22 автоматически? [Y/n]: '
+    # Без stdin (запуск по конвейеру) read вернёт ошибку и уронит set -e.
+    read -r answer || answer="y"
+    printf '\n'
+    case "${answer:-y}" in [Nn]*) DO_INSTALL=0 ;; *) DO_INSTALL=1 ;; esac
+  fi
+
+  if [ "$DO_INSTALL" = 1 ] && install_node; then
+    NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+    [ "$NODE_MAJOR" -ge 20 ] || die "после установки всё ещё Node $(node -v)"
+    ok "Node $(node -v)"
+  else
+    die "нужен Node 20+. Поставить вручную:
+      curl -fsSL https://deb.nodesource.com/setup_22.x | ${SUDO:+$SUDO -E }bash -
+      ${SUDO:+$SUDO }apt-get install -y nodejs"
+  fi
+fi
 
 # Зависимостей у проекта нет — сверяем это, а не устанавливаем.
 if [ -d node_modules ]; then
