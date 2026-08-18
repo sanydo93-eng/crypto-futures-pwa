@@ -45,22 +45,29 @@ const MARKET_LABELS = {
   firstHalfTotal15: 'тотал 1Т',
   firstHalfResult: 'исход 1Т',
   firstHalfScore: 'счёт 1Т',
+  matchResult: 'исход матча',
+  matchTotal15: 'тотал 1.5',
+  matchTotal25: 'тотал 2.5',
+  matchTotal35: 'тотал 3.5',
+  matchBtts: 'обе забьют',
+  matchScore: 'счёт матча',
 };
 
 const OUTCOME_LABELS = {
   yes: 'да',
   no: 'нет',
-  over: 'ТБ 1.5',
-  under: 'ТМ 1.5',
+  over: 'больше',
+  under: 'меньше',
   1: 'хозяева',
   X: 'ничья',
   2: 'гости',
 };
 
+// Счёт остаётся как есть («2-1»), остальные исходы переводятся.
+const SCORE_MARKETS = new Set(['firstHalfScore', 'matchScore', 'correctScore', 'firstSetScore']);
+
 const outcomeLabel = (market, outcome) =>
-  market === 'firstHalfResult' || market === 'firstHalfGoal' || market === 'firstHalfTotal15'
-    ? OUTCOME_LABELS[outcome] ?? outcome
-    : outcome;
+  SCORE_MARKETS.has(market) ? outcome : OUTCOME_LABELS[outcome] ?? outcome;
 
 /* ---------- вспомогательное ---------- */
 

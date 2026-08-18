@@ -20,6 +20,13 @@ export function loadConfig(env = process.env) {
       provider: env.FOOTBALL_PROVIDER ?? 'mock',
       statsPath: env.FOOTBALL_STATS_PATH ?? 'data/football-E0.json',
       betsapiToken: env.BETSAPI_TOKEN ?? '',
+      // The Odds API: бесплатный тариф, 500 запросов в месяц.
+      oddsApiKey: env.ODDS_API_KEY ?? '',
+      oddsApiRegions: env.ODDS_API_REGIONS ?? 'eu',
+      oddsApiLeagues: (env.ODDS_API_LEAGUES ?? 'soccer_epl')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
       // Пустой список — брать все лиги. Обычно нужен фильтр: справочник
       // команд собирается по одной лиге, а BetsAPI отдаёт весь мир сразу.
       leagues: (env.BETSAPI_LEAGUES ?? '')

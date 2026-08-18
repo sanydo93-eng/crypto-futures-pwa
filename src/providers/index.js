@@ -2,6 +2,7 @@ import * as tennisMock from './tennis/mock.js';
 import { createProvider as createApiTennis } from './tennis/apiTennis.js';
 import * as footballMock from './football/mock.js';
 import { createProvider as createBetsapi } from './football/betsapi.js';
+import { createProvider as createOddsApi } from './football/oddsapi.js';
 
 export function createTennisProvider(config) {
   switch (config.tennis.provider) {
@@ -30,9 +31,18 @@ export function createFootballProvider(config) {
         leagues: config.football.leagues,
         maxEvents: config.football.maxEvents,
       });
+    case 'odds-api':
+      return createOddsApi({
+        apiKey: config.football.oddsApiKey,
+        statsPath: config.football.statsPath,
+        leagues: config.football.oddsApiLeagues,
+        regions: config.football.oddsApiRegions,
+        maxEvents: config.football.maxEvents,
+      });
     default:
       throw new Error(
-        `Неизвестный провайдер футбола: ${config.football.provider}. Доступны: mock, betsapi`,
+        `Неизвестный провайдер футбола: ${config.football.provider}. `
+        + 'Доступны: mock, odds-api (бесплатный), betsapi',
       );
   }
 }
