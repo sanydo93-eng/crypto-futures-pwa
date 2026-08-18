@@ -21,9 +21,19 @@ import { tmpdir } from 'node:os';
 
 import { parseCsv } from '../src/csv.js';
 
+// Источники пробуются по очереди. raw.githubusercontent.com блокируют в ряде
+// стран, поэтому вторым идёт CDN, отдающий те же файлы с другого домена.
 const SOURCES = {
-  atp: 'https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_%YEAR%.csv',
-  wta: 'https://raw.githubusercontent.com/JeffSackmann/tennis_wta/master/wta_matches_%YEAR%.csv',
+  atp: [
+    'https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_%YEAR%.csv',
+    'https://cdn.jsdelivr.net/gh/JeffSackmann/tennis_atp@master/atp_matches_%YEAR%.csv',
+    'https://rawcdn.githack.com/JeffSackmann/tennis_atp/master/atp_matches_%YEAR%.csv',
+  ],
+  wta: [
+    'https://raw.githubusercontent.com/JeffSackmann/tennis_wta/master/wta_matches_%YEAR%.csv',
+    'https://cdn.jsdelivr.net/gh/JeffSackmann/tennis_wta@master/wta_matches_%YEAR%.csv',
+    'https://rawcdn.githack.com/JeffSackmann/tennis_wta/master/wta_matches_%YEAR%.csv',
+  ],
 };
 
 // Запасной путь: raw.githubusercontent.com блокируют в ряде стран, тогда как
@@ -43,10 +53,22 @@ async function cloneArchive(tour) {
   const target = join(tmpdir(), `sackmann-${tour}`);
   await rm(target, { recursive: true, force: true });
 
-  console.log(`  ${tour}: пробую через git clone (raw.githubusercontent недоступен)`);
+  console.log(`  ${tour}: пробую через git clone`);
   // Без --filter: при обычном checkout git всё равно дотягивает содержимое
   // файлов, а частичное клонирование добавляет лишнюю точку отказа.
-  await run('git', ['clone', '--depth', '1', REPOS[tour], target], { timeout: 900_000 });
+  //
+  // GIT_TERMINAL_PROMPT=0 обязателен. Если GitHub ответит 401 или 404, git
+  // решит, что репозиторий приватный, и запросит логин — установка повиснет
+  // на приглашении посреди скрипта, ничего не объяснив.
+  await run('git', ['clone', '--depth', '1', REPOS[tour], target], {
+    timeout: 900_000,
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: '0',
+      GIT_ASKPASS: 'echo',
+      GCM_INTERACTIVE: 'never',
+    },
+  });
 
   clones.set(tour, target);
   return target;
@@ -93,24 +115,45 @@ function finalize(tally) {
   };
 }
 
-async function fetchYear(tour, year) {
-  const url = SOURCES[tour].replace('%YEAR%', String(year));
+// Хост, который уже ответил, запоминаем: перебирать зеркала на каждый год
+// бессмысленно, а на блокировках каждый промах стоит секунд ожидания.
+const workingSource = new Map();
 
-  try {
-    const res = await fetch(url);
-    if (res.ok) return parseCsv(await res.text());
-    console.warn(`  ${tour} ${year}: HTTP ${res.status}`);
-  } catch (err) {
-    console.warn(`  ${tour} ${year}: ${err.message}`);
+async function fetchYear(tour, year) {
+  const templates = workingSource.has(tour)
+    ? [workingSource.get(tour)]
+    : SOURCES[tour];
+
+  for (const template of templates) {
+    const url = template.replace('%YEAR%', String(year));
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+      if (res.ok) {
+        if (!workingSource.has(tour)) {
+          workingSource.set(tour, template);
+          console.log(`  ${tour}: источник ${new URL(url).host}`);
+        }
+        return parseCsv(await res.text());
+      }
+      // 404 на первом же году обычно значит блокировку или иной путь,
+      // а не отсутствие года, — поэтому пробуем следующее зеркало.
+      if (res.status !== 404 || workingSource.has(tour)) {
+        console.warn(`  ${tour} ${year}: HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn(`  ${tour} ${year}: ${new URL(url).host} — ${err.message}`);
+    }
   }
 
-  // Прямая загрузка не удалась — забираем тот же файл из клона репозитория.
+  // Ни одно зеркало не ответило — забираем файл из клона репозитория.
   try {
     const dir = await cloneArchive(tour);
-    const file = join(dir, `${tour}_matches_${year}.csv`);
-    return parseCsv(await readFile(file, 'utf8'));
+    return parseCsv(await readFile(join(dir, `${tour}_matches_${year}.csv`), 'utf8'));
   } catch (err) {
-    console.warn(`  ${tour} ${year}: пропущен (${err.code === 'ENOENT' ? 'нет такого года в архиве' : err.message})`);
+    const reason = err.code === 'ENOENT'
+      ? 'нет такого года в архиве'
+      : String(err.message).split('\n')[0];
+    console.warn(`  ${tour} ${year}: пропущен (${reason})`);
     return [];
   }
 }
@@ -201,12 +244,15 @@ async function main() {
   const collected = Object.keys(output.players).length;
   if (collected === 0) {
     console.error('\nНи одного игрока не собрано — файл НЕ записан.');
-    console.error('Обычные причины:');
-    console.error('  - нет доступа к raw.githubusercontent.com;');
-    console.error('  - указанные годы ещё не опубликованы в архиве.');
-      console.error('Проверь оба пути:');
-    console.error('  curl -sSI https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_2023.csv');
+    console.error('Ни один источник не ответил. Проверь, что доступно с сервера:');
+    console.error('');
+    console.error('  curl -sSI https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_2023.csv | head -1');
+    console.error('  curl -sSI https://cdn.jsdelivr.net/gh/JeffSackmann/tennis_atp@master/atp_matches_2023.csv | head -1');
     console.error('  git ls-remote --heads https://github.com/JeffSackmann/tennis_atp.git');
+    console.error('');
+    console.error('Нужен хотя бы один. Если отвечает только git — дело в блокировке');
+    console.error('файловых хостов, и клонирование должно было сработать: пришли');
+    console.error('вывод последней команды.');
     process.exit(1);
   }
 
