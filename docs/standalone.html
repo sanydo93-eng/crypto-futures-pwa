@@ -1,0 +1,1086 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Модель против рынка</title>
+<meta name="theme-color" content="#0f1720">
+<meta name="description" content="Модели точного счёта в теннисе и гола в первом тайме в футболе">
+
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAACTElEQVR42r2Wv0vrUBTH8x+88a1vKFkSDNGhUKoYhBS6SShBRIhIxMls4iAoLoJ1ERwEsYqDugVcDIjgkg4F0c2YqDRNtYhp0dz8dBLtexrbJHZ4CZwpl+/5hPs959wD/fr958dA0zBJITSLMRzOcDjNYiSFoGm4Fy0UnZfh8GIpw4tERctJRv4zKlqOF4liKcNweDQpGNCfxbnFwf2TYX/SsNg/GeYWB/uzeK8AemroXNpr2Nu9ZG9Hw94+l/boqaGfATSL8SLxYG8anlyzlnrJXrOWDE9+sDd5kaBZLApAs5hwMSIZeQVM6I6gO8cKGIvOroAx3TnWHUEBE5KRFy5GOhhfAJJCeJHw/dcyeFXr1mo0oG6tgle1Zi1/fuFFgqSQTkCqL7VxmPUrr43RJ+dIdwQZFMKyy6CgO8KTc3RtjPq/bxxmU32pb4CZ+YFuvWatAE9VzYUwgGouAE/VrJXuo5n5gS8AmoYDK/IGTLbccsPeCS+enZZbvgGTgbXb7o93AMPhYSkenYOmexp4SzIoNN3TR+cgTMtw+F9AsZQJ93Dtxbu6M2e7j+7M2Rfvqm6thWmLpcw7AE3D/uLpiKo5B7yqv0i+lZlXrZpzYVpeJNA0DJEU0jFn/HELpp+9y3t7vfvo3l5/9i5vwXSYtqLlSAqBaBaL7KPxD5+3ghzearllBYxHyGkWgyIc/ufkWcPeDQLsNt2ziC5p+xw/IPYrit3k2Ms09kZLYlTEPuxiH9dJPDixP5lJPPpJrC1JLF5JrI5JLL//cX1/AyJ/k7eCXpp4AAAAAElFTkSuQmCC">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAACTElEQVR42r2Wv0vrUBTH8x+88a1vKFkSDNGhUKoYhBS6SShBRIhIxMls4iAoLoJ1ERwEsYqDugVcDIjgkg4F0c2YqDRNtYhp0dz8dBLtexrbJHZ4CZwpl+/5hPs959wD/fr958dA0zBJITSLMRzOcDjNYiSFoGm4Fy0UnZfh8GIpw4tERctJRv4zKlqOF4liKcNweDQpGNCfxbnFwf2TYX/SsNg/GeYWB/uzeK8AemroXNpr2Nu9ZG9Hw94+l/boqaGfATSL8SLxYG8anlyzlnrJXrOWDE9+sDd5kaBZLApAs5hwMSIZeQVM6I6gO8cKGIvOroAx3TnWHUEBE5KRFy5GOhhfAJJCeJHw/dcyeFXr1mo0oG6tgle1Zi1/fuFFgqSQTkCqL7VxmPUrr43RJ+dIdwQZFMKyy6CgO8KTc3RtjPq/bxxmU32pb4CZ+YFuvWatAE9VzYUwgGouAE/VrJXuo5n5gS8AmoYDK/IGTLbccsPeCS+enZZbvgGTgbXb7o93AMPhYSkenYOmexp4SzIoNN3TR+cgTMtw+F9AsZQJ93Dtxbu6M2e7j+7M2Rfvqm6thWmLpcw7AE3D/uLpiKo5B7yqv0i+lZlXrZpzYVpeJNA0DJEU0jFn/HELpp+9y3t7vfvo3l5/9i5vwXSYtqLlSAqBaBaL7KPxD5+3ghzearllBYxHyGkWgyIc/ufkWcPeDQLsNt2ziC5p+xw/IPYrit3k2Ms09kZLYlTEPuxiH9dJPDixP5lJPPpJrC1JLF5JrI5JLL//cX1/AyJ/k7eCXpp4AAAAAElFTkSuQmCC">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root {
+  --bg: #0f1720;
+  --surface: #172230;
+  --surface-2: #1e2c3d;
+  --line: #2a3b4f;
+  --text: #e8eef5;
+  --muted: #8ea3b8;
+  --accent: #d8f24a;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+/* Атрибут hidden обязан побеждать любые display из правил ниже. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.muted { color: var(--muted); }
+
+/* ---------- шапка ---------- */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.top__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.top__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.top__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.badge {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.button:active { background: var(--surface); }
+.button[disabled] { opacity: 0.5; cursor: default; }
+
+/* ---------- уведомление ---------- */
+
+.banner {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- фильтры ---------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.filter--range { flex: 1 1 180px; }
+.filter--range span { display: flex; gap: 6px; white-space: nowrap; }
+.filter input[type="range"] { flex: 1; min-width: 90px; accent-color: var(--accent); }
+.filter input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+output { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* ---------- карточки ---------- */
+
+.content { padding: 0 16px 32px; }
+.content__placeholder { padding: 32px 0; text-align: center; }
+
+.card {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.card__head { padding: 14px 14px 12px; }
+
+.card__players {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card__vs { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+.card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card__tags span::after { content: " ·"; }
+.card__tags span:last-child::after { content: ""; }
+
+/* Полоса вероятности победы по модели. */
+.odds-bar {
+  display: flex;
+  height: 6px;
+  margin-top: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.odds-bar__fill { background: var(--accent); }
+
+.card__probs {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- таблица исходов ---------- */
+
+.rows { border-top: 1px solid var(--line); }
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.row:last-child { border-bottom: 0; }
+.row--signal { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+
+.row__head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.row__score { font-weight: 600; white-space: nowrap; }
+.row__market { display: block; font-size: 11px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+
+.row__cell { text-align: right; min-width: 52px; font-size: 14px; }
+
+.edge { font-weight: 650; }
+.edge--pos { color: var(--good); }
+.edge--neg { color: var(--muted); }
+
+.stake { display: block; font-size: 12px; color: var(--warn); }
+
+.empty {
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- подвал ---------- */
+
+.foot {
+  padding: 0 16px 28px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (min-width: 700px) {
+  .content, .filters, .top, .foot { max-width: 720px; margin-inline: auto; }
+}
+
+/* ---------- вкладки ---------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tab {
+  flex: 1;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: var(--surface-2);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- переключатель и поиск ---------- */
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.segmented__item {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.segmented__item--active { background: var(--surface-2); color: var(--text); font-weight: 600; }
+
+.search {
+  flex: 1 1 140px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.search::placeholder { color: var(--muted); }
+
+/* ---------- таблица статистики ---------- */
+
+.stats {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.stats__row {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, minmax(52px, auto));
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+.stats__row:last-child { border-bottom: 0; }
+
+.stats__row--head {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats__cell { text-align: right; }
+
+.note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.card__tags .warn { color: var(--warn); }
+
+/* ---------- предпросмотр матча ---------- */
+
+.card { cursor: pointer; }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.preview {
+  width: min(680px, 100%);
+  max-height: 88vh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+
+@media (min-width: 700px) {
+  .preview { margin: auto; border-radius: var(--radius); }
+}
+
+.preview::backdrop { background: rgb(0 0 0 / 0.6); }
+
+.preview__body {
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 16px max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+.preview__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.preview__title { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.35; }
+.preview__close {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.preview__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 16px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.preview__section {
+  margin: 18px 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.legend { display: flex; gap: 14px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+.legend span::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+.legend .legend--model::before { background: var(--accent); }
+.legend .legend--market::before { background: var(--muted); }
+
+/* Пара полос: модель против рынка. Расхождение видно глазом. */
+.compare { display: grid; gap: 9px; }
+
+.compare__row {
+  display: grid;
+  grid-template-columns: 62px 1fr 64px;
+  gap: 10px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.compare__label { font-weight: 600; }
+.compare__sub { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+
+.compare__bars { display: grid; gap: 3px; }
+.compare__track { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.compare__fill { height: 100%; border-radius: 4px; }
+.compare__fill--model { background: var(--accent); }
+.compare__fill--market { background: var(--muted); }
+
+.compare__numbers { text-align: right; font-size: 12px; }
+.compare__edge { display: block; font-weight: 650; }
+.compare__row--signal .compare__edge { color: var(--good); }
+
+.preview__note {
+  margin-top: 16px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top__row">
+    <h1 class="top__title">Сигналы</h1>
+    <button id="refresh" class="button" type="button">Обновить</button>
+  </div>
+  <p class="top__meta">
+    <span id="provider" class="badge">—</span>
+    <span id="updated" class="muted">загрузка…</span>
+  </p>
+  <nav class="tabs" role="tablist">
+    <button class="tab tab--active" data-tab="tennis" role="tab">Теннис</button>
+    <button class="tab" data-tab="football" role="tab">Футбол</button>
+    <button class="tab" data-tab="stats" role="tab">Статистика</button>
+  </nav>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<nav class="filters" id="filters" aria-label="Фильтры">
+  <label class="filter">
+    <input type="checkbox" id="only-signals" checked>
+    <span>Только сигналы</span>
+  </label>
+  <label class="filter filter--range">
+    <span>Порог <output id="edge-value">5%</output></span>
+    <input type="range" id="min-edge" min="0" max="30" step="1" value="5">
+  </label>
+</nav>
+
+<nav class="filters" id="stats-controls" aria-label="Статистика" hidden>
+  <div class="segmented" role="group">
+    <button class="segmented__item segmented__item--active" data-stats-sport="tennis">Игроки</button>
+    <button class="segmented__item" data-stats-sport="football">Команды</button>
+  </div>
+  <input type="search" id="stats-search" class="search" placeholder="Поиск по имени" autocomplete="off">
+</nav>
+
+<main id="content" class="content" aria-live="polite">
+  <p class="muted content__placeholder">Загрузка…</p>
+</main>
+
+<dialog id="preview" class="preview" aria-label="Разбор матча">
+  <div id="preview-body" class="preview__body"></div>
+</dialog>
+
+<footer class="foot">
+  <p class="muted" id="foot-note"></p>
+</footer>
+
+<script>window.EMBEDDED_DATA={"generatedAt":"2026-08-18T02:06:32.370Z","signals":{"tennis":{"sport":"tennis","provider":"mock","generatedAt":"2026-08-18T02:06:32.370Z","settings":{"minEdge":0.05,"minProbability":0.02,"devigMethod":"power","kellyFraction":0.25},"matches":[{"sport":"tennis","match":{"id":"demo-1","tournament":"Demo Open (демо-данные)","surface":"hard","tour":"atp","startsAt":null,"players":["Смирнов А.","Ковалёв Д."]},"model":{"pA":0.685,"pB":0.59,"aWins":0.8820952448460844,"calibrated":false,"scores":[{"label":"2-0","a":2,"b":0,"prob":0.6176131164519554,"winner":"A"},{"label":"2-1","a":2,"b":1,"prob":0.264482128394129,"winner":"A"},{"label":"1-2","a":1,"b":2,"prob":0.07205894521009026,"winner":"B"},{"label":"0-2","a":0,"b":2,"prob":0.045845809943825526,"winner":"B"}],"firstSet":[{"label":"6-3","a":6,"b":3,"prob":0.29741525225925014,"winner":"A"},{"label":"7-6","a":7,"b":6,"prob":0.11379764906429596,"winner":"A"},{"label":"6-1","a":6,"b":1,"prob":0.11134410474191214,"winner":"A"},{"label":"4-6","a":4,"b":6,"prob":0.09730685769070899,"winner":"B"},{"label":"6-2","a":6,"b":2,"prob":0.0921092107261938,"winner":"A"},{"label":"6-4","a":6,"b":4,"prob":0.08923585842035174,"winner":"A"},{"label":"7-5","a":7,"b":5,"prob":0.06601940727207671,"winner":"A"},{"label":"6-7","a":6,"b":7,"prob":0.06026384387739958,"winner":"B"},{"label":"5-7","a":5,"b":7,"prob":0.022124100355116517,"winner":"B"},{"label":"2-6","a":2,"b":6,"prob":0.01880024558116508,"winner":"B"},{"label":"6-0","a":6,"b":0,"prob":0.01596217076998447,"winner":"A"},{"label":"3-6","a":3,"b":6,"prob":0.013346191592628983,"winner":"B"},{"label":"1-6","a":1,"b":6,"prob":0.0016743850787676179,"winner":"B"},{"label":"0-6","a":0,"b":6,"prob":0.0006007225701483708,"winner":"B"}]},"markets":[{"market":"correctScore","outcome":"2-0","modelProb":0.6176131164519554,"marketProb":0.6614350270057154,"marketOdds":1.42,"fairOdds":1.6191365975916587,"overround":0.1544297370996699,"edge":-0.12298937463822346,"stake":0},{"market":"correctScore","outcome":"2-1","modelProb":0.264482128394129,"marketProb":0.2492342129827048,"marketOdds":3.25,"fairOdds":3.780973807461987,"overround":0.1544297370996699,"edge":-0.14043308271908073,"stake":0},{"market":"correctScore","outcome":"1-2","modelProb":0.07205894521009026,"marketProb":0.05619297850837902,"marketOdds":11.5,"fairOdds":13.877527586401197,"overround":0.1544297370996699,"edge":-0.17132213008396202,"stake":0},{"market":"correctScore","outcome":"0-2","modelProb":0.045845809943825526,"marketProb":0.033137781503200806,"marketOdds":18,"fairOdds":21.812244155470072,"overround":0.1544297370996699,"edge":-0.17477542101114052,"stake":0},{"market":"firstSetScore","outcome":"6-0","modelProb":0.01596217076998447,"marketProb":0.01484003030401062,"marketOdds":53,"fairOdds":62.648120635347205,"overround":0.12917821751722003,"edge":-0.15400494919082308,"stake":0},{"market":"firstSetScore","outcome":"6-1","modelProb":0.11134410474191214,"marketProb":0.11638906437307923,"marketOdds":7.6,"fairOdds":8.981167007610598,"overround":0.12917821751722003,"edge":-0.15378480396146776,"stake":0},{"market":"firstSetScore","outcome":"6-2","modelProb":0.0921092107261938,"marketProb":0.09504284171894392,"marketOdds":9.2,"fairOdds":10.856677547402134,"overround":0.12917821751722003,"edge":-0.15259526131901713,"stake":0},{"market":"firstSetScore","outcome":"6-3","modelProb":0.29741525225925014,"marketProb":0.3281191586679811,"marketOdds":2.86,"fairOdds":3.362302344630001,"overround":0.12917821751722003,"edge":-0.1493923785385446,"stake":0},{"market":"firstSetScore","outcome":"6-4","modelProb":0.08923585842035174,"marketProb":0.063284926057801,"marketOdds":13.5,"fairOdds":11.206257413801413,"overround":0.12917821751722003,"edge":0.20468408867474852,"stake":0.00409368177349497},{"market":"firstSetScore","outcome":"7-5","modelProb":0.06601940727207671,"marketProb":0.046644975931158315,"marketOdds":18,"fairOdds":15.147061164588125,"overround":0.12917821751722003,"edge":0.1883493308973807,"stake":0.002769843101432069},{"market":"firstSetScore","outcome":"7-6","modelProb":0.11379764906429596,"marketProb":0.11887570813473257,"marketOdds":7.45,"fairOdds":8.787527758460085,"overround":0.12917821751722003,"edge":-0.15220751447099512,"stake":0},{"market":"firstSetScore","outcome":"0-6","modelProb":0.0006007225701483708,"marketProb":0.0017400417420880138,"marketOdds":400,"fairOdds":1664.6619416230901,"overround":0.12917821751722003,"edge":-0.7597109719406516,"stake":0},{"market":"firstSetScore","outcome":"1-6","modelProb":0.0016743850787676179,"marketProb":0.0028643457137107475,"marketOdds":250,"fairOdds":597.2341802854697,"overround":0.12917821751722003,"edge":-0.5814037303080956,"stake":0},{"market":"firstSetScore","outcome":"2-6","modelProb":0.01880024558116508,"marketProb":0.017652095449840956,"marketOdds":45,"fairOdds":53.1907945395056,"overround":0.12917821751722003,"edge":-0.1539889488475713,"stake":0},{"market":"firstSetScore","outcome":"3-6","modelProb":0.013346191592628983,"marketProb":0.012150016818972684,"marketOdds":64,"fairOdds":74.92774197489369,"overround":0.12917821751722003,"edge":-0.1458437380717451,"stake":0},{"market":"firstSetScore","outcome":"4-6","modelProb":0.09730685769070899,"marketProb":0.1008453374128972,"marketOdds":8.7,"fairOdds":10.27676798667687,"overround":0.12917821751722003,"edge":-0.15343033809083184,"stake":0},{"market":"firstSetScore","outcome":"5-7","modelProb":0.022124100355116517,"marketProb":0.0211186612491184,"marketOdds":38,"fairOdds":45.19957801442243,"overround":0.12917821751722003,"edge":-0.1592841865055724,"stake":0},{"market":"firstSetScore","outcome":"6-7","modelProb":0.06026384387739958,"marketProb":0.06043279642566541,"marketOdds":14.1,"fairOdds":16.593697574857558,"overround":0.12917821751722003,"edge":-0.15027980132866592,"stake":0}],"signals":[{"market":"firstSetScore","outcome":"6-4","modelProb":0.08923585842035174,"marketProb":0.063284926057801,"marketOdds":13.5,"fairOdds":11.206257413801413,"overround":0.12917821751722003,"edge":0.20468408867474852,"stake":0.00409368177349497},{"market":"firstSetScore","outcome":"7-5","modelProb":0.06601940727207671,"marketProb":0.046644975931158315,"marketOdds":18,"fairOdds":15.147061164588125,"overround":0.12917821751722003,"edge":0.1883493308973807,"stake":0.002769843101432069}]},{"sport":"tennis","match":{"id":"demo-2","tournament":"Demo Clay Cup (демо-данные)","surface":"clay","tour":"wta","startsAt":null,"players":["Тарасова Е.","Литвинова М."]},"model":{"pA":0.585,"pB":0.53,"aWins":0.7671437772510559,"calibrated":false,"scores":[{"label":"2-0","a":2,"b":0,"prob":0.4716732372294249,"winner":"A"},{"label":"2-1","a":2,"b":1,"prob":0.295470540021631,"winner":"A"},{"label":"1-2","a":1,"b":2,"prob":0.13475240455799667,"winner":"B"},{"label":"0-2","a":0,"b":2,"prob":0.09810381819094788,"winner":"B"}],"firstSet":[{"label":"6-4","a":6,"b":4,"prob":0.1913356672488548,"winner":"A"},{"label":"6-2","a":6,"b":2,"prob":0.14694214048154952,"winner":"A"},{"label":"6-3","a":6,"b":3,"prob":0.11729981060266709,"winner":"A"},{"label":"3-6","a":3,"b":6,"prob":0.09014522196086523,"winner":"B"},{"label":"7-6","a":7,"b":6,"prob":0.07328208237371898,"winner":"A"},{"label":"7-5","a":7,"b":5,"prob":0.07046528471086322,"winner":"A"},{"label":"4-6","a":4,"b":6,"prob":0.06521550091227969,"winner":"B"},{"label":"6-1","a":6,"b":1,"prob":0.06064285389633488,"winner":"A"},{"label":"6-7","a":6,"b":7,"prob":0.05157833600054061,"winner":"B"},{"label":"5-7","a":5,"b":7,"prob":0.04009203411297624,"winner":"B"},{"label":"2-6","a":2,"b":6,"prob":0.03472900208747502,"winner":"B"},{"label":"6-0","a":6,"b":0,"prob":0.026816870205250004,"winner":"A"},{"label":"1-6","a":1,"b":6,"prob":0.02651599405926858,"winner":"B"},{"label":"0-6","a":0,"b":6,"prob":0.004939201347356228,"winner":"B"}]},"markets":[{"market":"correctScore","outcome":"2-0","modelProb":0.4716732372294249,"marketProb":0.5165782552676682,"marketOdds":1.8,"fairOdds":2.1201118084925255,"overround":0.13587361748831128,"edge":-0.15098817298703515,"stake":0},{"market":"correctScore","outcome":"2-1","modelProb":0.295470540021631,"marketProb":0.3058107198861388,"marketOdds":2.87,"fairOdds":3.3844321668305457,"overround":0.13587361748831128,"edge":-0.1519995501379191,"stake":0},{"market":"correctScore","outcome":"1-2","modelProb":0.13475240455799667,"marketProb":0.0890947750567481,"marketOdds":8.6,"fairOdds":7.421017853300018,"overround":0.13587361748831128,"edge":0.1588706791987713,"stake":0.005226009184170108},{"market":"correctScore","outcome":"0-2","modelProb":0.09810381819094788,"marketProb":0.08851624978944506,"marketOdds":8.65,"fairOdds":10.193283181431473,"overround":0.13587361748831128,"edge":-0.1514019726483008,"stake":0}],"signals":[{"market":"correctScore","outcome":"1-2","modelProb":0.13475240455799667,"marketProb":0.0890947750567481,"marketOdds":8.6,"fairOdds":7.421017853300018,"overround":0.13587361748831128,"edge":0.1588706791987713,"stake":0.005226009184170108}]},{"sport":"tennis","match":{"id":"demo-3","tournament":"Demo Slam (демо-данные)","surface":"grass","tour":"atp","startsAt":null,"players":["Белов И.","Гордеев П."]},"model":{"pA":0.6849999999999999,"pB":0.6499999999999999,"aWins":0.7019129343020816,"calibrated":false,"scores":[{"label":"3-1","a":3,"b":1,"prob":0.2663845203965459,"winner":"A"},{"label":"3-0","a":3,"b":0,"prob":0.22844634274900966,"winner":"A"},{"label":"3-2","a":3,"b":2,"prob":0.20708207115652597,"winner":"A"},{"label":"2-3","a":2,"b":3,"prob":0.13166932727560332,"winner":"B"},{"label":"1-3","a":1,"b":3,"prob":0.10769442399365028,"winner":"B"},{"label":"0-3","a":0,"b":3,"prob":0.05872331442866519,"winner":"B"}],"firstSet":[{"label":"6-3","a":6,"b":3,"prob":0.24278308519751451,"winner":"A"},{"label":"4-6","a":4,"b":6,"prob":0.1725598822794188,"winner":"B"},{"label":"7-6","a":7,"b":6,"prob":0.15562051329954765,"winner":"A"},{"label":"6-7","a":6,"b":7,"prob":0.12262995613836283,"winner":"B"},{"label":"6-4","a":6,"b":4,"prob":0.06872284399478334,"winner":"A"},{"label":"7-5","a":7,"b":5,"prob":0.055605736329489404,"winner":"A"},{"label":"6-1","a":6,"b":1,"prob":0.044894866600112306,"winner":"A"},{"label":"6-2","a":6,"b":2,"prob":0.04029175259478304,"winner":"A"},{"label":"5-7","a":5,"b":7,"prob":0.036262357791210814,"winner":"B"},{"label":"2-6","a":2,"b":6,"prob":0.03253989463474552,"winner":"B"},{"label":"3-6","a":3,"b":6,"prob":0.021200933717992664,"winner":"B"},{"label":"6-0","a":6,"b":0,"prob":0.003391065544424624,"winner":"A"},{"label":"1-6","a":1,"b":6,"prob":0.002556640653161589,"winner":"B"},{"label":"0-6","a":0,"b":6,"prob":0.0009404712244530159,"winner":"B"}]},"markets":[{"market":"correctScore","outcome":"3-0","modelProb":0.22844634274900966,"marketProb":0.2461650156343688,"marketOdds":3.72,"fairOdds":4.377395531775634,"overround":0.11145481210926977,"edge":-0.150179604973684,"stake":0},{"market":"correctScore","outcome":"3-1","modelProb":0.2663845203965459,"marketProb":0.29003572768462155,"marketOdds":3.19,"fairOdds":3.7539718843699244,"overround":0.11145481210926977,"edge":-0.1502333799350185,"stake":0},{"market":"correctScore","outcome":"3-2","modelProb":0.20708207115652597,"marketProb":0.1591027438350248,"marketOdds":5.6,"fairOdds":4.829003275924045,"overround":0.11145481210926977,"edge":0.15965959847654543,"stake":0.0086771520911166},{"market":"correctScore","outcome":"2-3","modelProb":0.13166932727560332,"marketProb":0.13683387019895676,"marketOdds":6.45,"fairOdds":7.594783239887392,"overround":0.11145481210926977,"edge":-0.15073283907235857,"stake":0},{"market":"correctScore","outcome":"1-3","modelProb":0.10769442399365028,"marketProb":0.11021102669729016,"marketOdds":7.9,"fairOdds":9.285531812296618,"overround":0.11145481210926977,"edge":-0.14921405045016267,"stake":0},{"market":"correctScore","outcome":"0-3","modelProb":0.05872331442866519,"marketProb":0.05765161594973788,"marketOdds":14.5,"fairOdds":17.029011555789502,"overround":0.11145481210926977,"edge":-0.1485119407843547,"stake":0}],"signals":[{"market":"correctScore","outcome":"3-2","modelProb":0.20708207115652597,"marketProb":0.1591027438350248,"marketOdds":5.6,"fairOdds":4.829003275924045,"overround":0.11145481210926977,"edge":0.15965959847654543,"stake":0.0086771520911166}]}],"signalCount":4},"football":{"sport":"football","provider":"football-mock","generatedAt":"2026-08-18T02:06:32.370Z","settings":{"minEdge":0.05,"minProbability":0.02,"devigMethod":"power","kellyFraction":0.25},"matches":[{"sport":"football","match":{"id":"fb-demo-1","competition":"Демо-лига, тур 12","startsAt":null,"teams":["Северный ФК","Приморье"],"knownTeams":true},"model":{"lambdaHome":0.85,"lambdaAway":0.65,"expectedGoals":1.5,"goalChance":0.764541820854,"result":{"1":0.363928604119,"2":0.246895607529,"X":0.389175788352},"exactScore":[{"outcome":"0-0","prob":0.235458179146},{"outcome":"1-0","prob":0.177332753258},{"outcome":"1-1","prob":0.135607399551},{"outcome":"0-1","prob":0.132706706512},{"outcome":"2-0","prob":0.080605796936},{"outcome":"2-1","prob":0.052393768008}]},"markets":[{"market":"firstHalfGoal","outcome":"yes","modelProb":0.764541820854,"marketProb":0.7867810128815887,"marketOdds":1.24,"fairOdds":1.3079729227669863,"overround":0.05645161290322598,"edge":-0.05196814214103995,"stake":0},{"market":"firstHalfGoal","outcome":"no","modelProb":0.235458179146,"marketProb":0.21321898711841114,"marketOdds":4,"fairOdds":4.247038703972701,"overround":0.05645161290322598,"edge":-0.05816728341599997,"stake":0},{"market":"firstHalfTotal15","outcome":"over","modelProb":0.454502361084,"marketProb":0.40821837071922756,"marketOdds":2.55,"fairOdds":2.200208592129145,"overround":-0.02980845517397701,"edge":0.15898102076419995,"stake":0.02564210012325806},{"market":"firstHalfTotal15","outcome":"under","modelProb":0.545497638916,"marketProb":0.5917816292807724,"marketOdds":1.73,"fairOdds":1.833188502863507,"overround":-0.02980845517397701,"edge":-0.05628908467532001,"stake":0},{"market":"firstHalfResult","outcome":"1","modelProb":0.363928604119,"marketProb":0.3651947700004196,"marketOdds":2.57,"fairOdds":2.7477917060704926,"overround":0.07032198958269009,"edge":-0.06470348741416998,"stake":0},{"market":"firstHalfResult","outcome":"2","modelProb":0.246895607529,"marketProb":0.24194020620724183,"marketOdds":3.78,"fairOdds":4.0502948189653045,"overround":0.07032198958269009,"edge":-0.06673460354038008,"stake":0},{"market":"firstHalfResult","outcome":"X","modelProb":0.389175788352,"marketProb":0.3928650237923386,"marketOdds":2.4,"fairOdds":2.5695329204177635,"overround":0.07032198958269009,"edge":-0.06597810795519998,"stake":0},{"market":"firstHalfScore","outcome":"0-0","modelProb":0.235458179146,"marketProb":0.25935377725822645,"marketOdds":3.61,"fairOdds":4.247038703972701,"overround":0.11221505364763118,"edge":-0.14999597328294,"stake":0},{"market":"firstHalfScore","outcome":"1-0","modelProb":0.177332753258,"marketProb":0.19264739966102612,"marketOdds":4.79,"fairOdds":5.639116190482353,"overround":0.11221505364763118,"edge":-0.15057611189418008,"stake":0},{"market":"firstHalfScore","outcome":"1-1","modelProb":0.135607399551,"marketProb":0.10164012615340293,"marketOdds":8.8,"fairOdds":7.374228864435338,"overround":0.11221505364763118,"edge":0.19334511604880023,"stake":0.0061969588477179555},{"market":"firstHalfScore","outcome":"0-1","modelProb":0.132706706512,"marketProb":0.14182409050395212,"marketOdds":6.41,"fairOdds":7.535414194832534,"overround":0.11221505364763118,"edge":-0.1493500112580799,"stake":0},{"market":"firstHalfScore","outcome":"2-0","modelProb":0.080605796936,"marketProb":0.0839952067725936,"marketOdds":10.55,"fairOdds":12.406055618977227,"overround":0.11221505364763118,"edge":-0.1496088423252,"stake":0},{"market":"firstHalfScore","outcome":"2-1","modelProb":0.052393768008,"marketProb":0.05340622984763956,"marketOdds":16.23,"fairOdds":19.086239413956832,"overround":0.11221505364763118,"edge":-0.14964914523016004,"stake":0},{"market":"firstHalfScore","outcome":"0-2","modelProb":0.047136261876,"marketProb":0.04778793944792896,"marketOdds":18.04,"fairOdds":21.2150891946135,"overround":0.11221505364763118,"edge":-0.14966183575696002,"stake":0},{"market":"firstHalfScore","outcome":"1-2","modelProb":0.040065822594,"marketProb":0.04028954304610675,"marketOdds":21.22,"fairOdds":24.958928464624947,"overround":0.11221505364763118,"edge":-0.14980324455532001,"stake":0},{"market":"firstHalfScore","outcome":"3-0","modelProb":0.022838309132,"marketProb":0.02231734455514451,"marketOdds":37.22,"fairOdds":43.78607865495811,"overround":0.11221505364763118,"edge":-0.14995813410696002,"stake":0},{"market":"firstHalfScore","outcome":"2-2","modelProb":0.017027974603,"marketProb":0.01639093127789728,"marketOdds":49.92,"fairOdds":58.72689050310302,"overround":0.11221505364763118,"edge":-0.14996350781824008,"stake":0},{"market":"firstHalfScore","outcome":"3-1","modelProb":0.014844900936,"marketProb":0.014189613410463972,"marketOdds":57.26,"fairOdds":67.36319792979722,"overround":0.11221505364763118,"edge":-0.14998097240464003,"stake":0},{"market":"firstHalfScore","outcome":"0-3","modelProb":0.01021285674,"marketProb":0.009576557009691655,"marketOdds":83.23,"fairOdds":97.91579628091405,"overround":0.11221505364763118,"edge":-0.1499839335298,"stake":0},{"market":"firstHalfScore","outcome":"1-3","modelProb":0.008680928229,"marketProb":0.00807228582232089,"marketOdds":97.92,"fairOdds":115.19505444813417,"overround":0.11221505364763118,"edge":-0.14996350781631995,"stake":0},{"market":"firstHalfScore","outcome":"3-2","modelProb":0.004824592804,"marketProb":0.004353368324837188,"marketOdds":176.18,"fairOdds":207.27137825412217,"overround":0.11221505364763118,"edge":-0.15000323979127994,"stake":0},{"market":"firstHalfScore","outcome":"2-3","modelProb":0.003689394497,"marketProb":0.003283534340593821,"marketOdds":230.39,"fairOdds":271.04718696066294,"overround":0.11221505364763118,"edge":-0.15000040183617003,"stake":0},{"market":"firstHalfScore","outcome":"3-3","modelProb":0.001045328441,"marketProb":0.0008720525681742918,"marketOdds":813.14,"fairOdds":956.6371302816202,"overround":0.11221505364763118,"edge":-0.1500016314852599,"stake":0}],"signals":[{"market":"firstHalfScore","outcome":"1-1","modelProb":0.135607399551,"marketProb":0.10164012615340293,"marketOdds":8.8,"fairOdds":7.374228864435338,"overround":0.11221505364763118,"edge":0.19334511604880023,"stake":0.0061969588477179555},{"market":"firstHalfTotal15","outcome":"over","modelProb":0.454502361084,"marketProb":0.40821837071922756,"marketOdds":2.55,"fairOdds":2.200208592129145,"overround":-0.02980845517397701,"edge":0.15898102076419995,"stake":0.02564210012325806}]},{"sport":"football","match":{"id":"fb-demo-2","competition":"Демо-лига, тур 12","startsAt":null,"teams":["Заречье","Горняк"],"knownTeams":true},"model":{"lambdaHome":0.5,"lambdaAway":0.38,"expectedGoals":0.88,"goalChance":0.577336211408,"result":{"1":0.285360142118,"2":0.20146305134,"X":0.513176806542},"exactScore":[{"outcome":"0-0","prob":0.422663788592},{"outcome":"1-0","prob":0.199510581269},{"outcome":"0-1","prob":0.14973663168},{"outcome":"1-1","prob":0.086689628867},{"outcome":"2-0","prob":0.051847864155},{"outcome":"0-2","prob":0.029947326336}]},"markets":[{"market":"firstHalfGoal","outcome":"yes","modelProb":0.577336211408,"marketProb":0.6321258938532964,"marketOdds":1.55,"fairOdds":1.7320929819406496,"overround":0.029776674937965097,"edge":-0.10512887231760004,"stake":0},{"market":"firstHalfGoal","outcome":"no","modelProb":0.422663788592,"marketProb":0.3678741061467036,"marketOdds":2.6,"fairOdds":2.365946709868979,"overround":0.029776674937965097,"edge":0.0989258503392001,"stake":0.015457164115500015},{"market":"firstHalfTotal15","outcome":"over","modelProb":0.228088998459,"marketProb":0.20188191715947137,"marketOdds":4.1,"fairOdds":4.384253544695863,"overround":0.06357457017193124,"edge":-0.06483510631810008,"stake":0},{"market":"firstHalfTotal15","outcome":"under","modelProb":0.771911001541,"marketProb":0.7981180828405285,"marketOdds":1.22,"fairOdds":1.2954861350643478,"overround":0.06357457017193124,"edge":-0.058268578119979986,"stake":0},{"market":"firstHalfResult","outcome":"1","modelProb":0.285360142118,"marketProb":0.281327326390561,"marketOdds":3.3,"fairOdds":3.5043436430112496,"overround":0.06156232734072842,"edge":-0.05831153101060016,"stake":0},{"market":"firstHalfResult","outcome":"2","modelProb":0.20146305134,"marketProb":0.19543503234315196,"marketOdds":4.65,"fairOdds":4.9636893383112,"overround":0.06156232734072842,"edge":-0.0631968112689999,"stake":0},{"market":"firstHalfResult","outcome":"X","modelProb":0.513176806542,"marketProb":0.523237641266287,"marketOdds":1.84,"fairOdds":1.9486461337534295,"overround":0.06156232734072842,"edge":-0.05575467596271988,"stake":0}],"signals":[{"market":"firstHalfGoal","outcome":"no","modelProb":0.422663788592,"marketProb":0.3678741061467036,"marketOdds":2.6,"fairOdds":2.365946709868979,"overround":0.029776674937965097,"edge":0.0989258503392001,"stake":0.015457164115500015}]},{"sport":"football","match":{"id":"fb-demo-3","competition":"Демо-кубок, 1/8 финала","startsAt":null,"teams":["Луговое","Верховина"],"knownTeams":true},"model":{"lambdaHome":0.7,"lambdaAway":0.6,"expectedGoals":1.2999999999999998,"goalChance":0.716021850202,"result":{"1":0.319626771726,"2":0.257890884023,"X":0.422482344251},"exactScore":[{"outcome":"0-0","prob":0.283978149798},{"outcome":"1-0","prob":0.179325933366},{"outcome":"0-1","prob":0.152072752003},{"outcome":"1-1","prob":0.125909697895},{"outcome":"2-0","prob":0.066770294338},{"outcome":"0-2","prob":0.049055726453}]},"markets":[{"market":"firstHalfGoal","outcome":"yes","modelProb":0.716021850202,"marketProb":0.7308712987707164,"marketOdds":1.33,"fairOdds":1.3966054244264832,"overround":0.05491000227842324,"edge":-0.047690939231339935,"stake":0},{"market":"firstHalfGoal","outcome":"no","modelProb":0.283978149798,"marketProb":0.2691287012292837,"marketOdds":3.3,"fairOdds":3.5213976875027964,"overround":0.05491000227842324,"edge":-0.06287210566660006,"stake":0},{"market":"firstHalfTotal15","outcome":"over","modelProb":0.384623164833,"marketProb":0.37416953529302144,"marketOdds":2.44,"fairOdds":2.599947406792805,"overround":0.06343083681560069,"edge":-0.061519477807480016,"stake":0},{"market":"firstHalfTotal15","outcome":"under","modelProb":0.615376835167,"marketProb":0.6258304647069786,"marketOdds":1.53,"fairOdds":1.6250205448968866,"overround":0.06343083681560069,"edge":-0.05847344219448991,"stake":0},{"market":"firstHalfResult","outcome":"1","modelProb":0.319626771726,"marketProb":0.3473713024688986,"marketOdds":2.94,"fairOdds":3.128649063405896,"overround":-0.021502307216592964,"edge":-0.060297291125559926,"stake":0},{"market":"firstHalfResult","outcome":"2","modelProb":0.257890884023,"marketProb":0.28174114168661135,"marketOdds":3.64,"fairOdds":3.877608949957359,"overround":-0.021502307216592964,"edge":-0.061277182156280086,"stake":0},{"market":"firstHalfResult","outcome":"X","modelProb":0.422482344251,"marketProb":0.3708875558444901,"marketOdds":2.75,"fairOdds":2.366962817754799,"overround":-0.021502307216592964,"edge":0.16182644669024993,"stake":0.023118063812892848}],"signals":[{"market":"firstHalfResult","outcome":"X","modelProb":0.422482344251,"marketProb":0.3708875558444901,"marketOdds":2.75,"fairOdds":2.366962817754799,"overround":-0.021502307216592964,"edge":0.16182644669024993,"stake":0.023118063812892848}]}],"signalCount":4}},"stats":{"tennis":{"sport":"tennis","source":"fixtures","note":"Архив игроков не собран — показаны участники матчей витрины.","rows":[{"name":"Смирнов А.","tour":"atp","spw":0.685,"rpw":0.395,"matches":null,"combined":1.08},{"name":"Белов И.","tour":"atp","spw":0.72,"rpw":0.34,"matches":null,"combined":1.06},{"name":"Тарасова Е.","tour":"wta","spw":0.575,"rpw":0.465,"matches":null,"combined":1.04},{"name":"Гордеев П.","tour":"atp","spw":0.655,"rpw":0.37,"matches":null,"combined":1.025},{"name":"Литвинова М.","tour":"wta","spw":0.545,"rpw":0.44,"matches":null,"combined":0.9850000000000001},{"name":"Ковалёв Д.","tour":"atp","spw":0.63,"rpw":0.355,"matches":null,"combined":0.985}]},"football":{"sport":"football","source":"synthetic","note":"Демо-данные: синтетическая история.","competition":"Демо-лига","league":{"full":{"home":1.8392857142857142,"away":1.1964285714285714},"firstHalf":{"home":0.7678571428571429,"away":0.5178571428571429}},"rows":[{"name":"Приморье","matches":14,"scored":29,"conceded":23,"scored1H":10,"conceded1H":14,"goalsPerMatch":2.0714285714285716,"goals1HPerMatch":1.7142857142857142,"goalIn1HShare":0.8571428571428571},{"name":"Верховина","matches":14,"scored":18,"conceded":28,"scored1H":9,"conceded1H":12,"goalsPerMatch":1.2857142857142858,"goals1HPerMatch":1.5,"goalIn1HShare":0.8571428571428571},{"name":"Дубрава","matches":14,"scored":23,"conceded":25,"scored1H":10,"conceded1H":10,"goalsPerMatch":1.6428571428571428,"goals1HPerMatch":1.4285714285714286,"goalIn1HShare":0.7857142857142857},{"name":"Горняк","matches":14,"scored":13,"conceded":26,"scored1H":9,"conceded1H":9,"goalsPerMatch":0.9285714285714286,"goals1HPerMatch":1.2857142857142858,"goalIn1HShare":0.7142857142857143},{"name":"Луговое","matches":14,"scored":16,"conceded":16,"scored1H":9,"conceded1H":8,"goalsPerMatch":1.1428571428571428,"goals1HPerMatch":1.2142857142857142,"goalIn1HShare":0.7142857142857143},{"name":"Заречье","matches":14,"scored":23,"conceded":17,"scored1H":8,"conceded1H":6,"goalsPerMatch":1.6428571428571428,"goals1HPerMatch":1,"goalIn1HShare":0.6428571428571429},{"name":"Стрела","matches":14,"scored":21,"conceded":20,"scored1H":8,"conceded1H":7,"goalsPerMatch":1.5,"goals1HPerMatch":1.0714285714285714,"goalIn1HShare":0.6428571428571429},{"name":"Северный ФК","matches":14,"scored":27,"conceded":15,"scored1H":9,"conceded1H":6,"goalsPerMatch":1.9285714285714286,"goals1HPerMatch":1.0714285714285714,"goalIn1HShare":0.5}]}}};</script>
+<script type="module">
+const els = {
+  content: document.getElementById('content'),
+  provider: document.getElementById('provider'),
+  updated: document.getElementById('updated'),
+  refresh: document.getElementById('refresh'),
+  banner: document.getElementById('banner'),
+  filters: document.getElementById('filters'),
+  statsControls: document.getElementById('stats-controls'),
+  statsSearch: document.getElementById('stats-search'),
+  onlySignals: document.getElementById('only-signals'),
+  minEdge: document.getElementById('min-edge'),
+  edgeValue: document.getElementById('edge-value'),
+  footNote: document.getElementById('foot-note'),
+  preview: document.getElementById('preview'),
+  previewBody: document.getElementById('preview-body'),
+  tabs: [...document.querySelectorAll('.tab')],
+  statsSports: [...document.querySelectorAll('[data-stats-sport]')],
+};
+
+const state = {
+  tab: 'tennis',
+  statsSport: 'tennis',
+  signals: { tennis: null, football: null },
+  stats: { tennis: null, football: null },
+};
+
+const percent = (value, digits = 1) =>
+  value == null ? '—' : `${(value * 100).toFixed(digits)}%`;
+const signed = (value) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
+const decimal = (value, digits = 2) => (value == null ? '—' : value.toFixed(digits));
+
+const FOOT_NOTES = {
+  tennis: 'Точный счёт считается цепью Маркова по очкам: из вероятности выиграть очко '
+    + 'на подаче выводится распределение по геймам, сетам и матчу.',
+  football: 'Первый тайм считается пуассоновской моделью с поправкой Диксона — Коулза '
+    + 'по собственным данным первых таймов, а не как доля от матча.',
+  stats: 'Это входные данные моделей. У игроков и команд с малой выборкой оценка '
+    + 'стягивается к среднему по туру или лиге — иначе редкие матчи дают ложные сигналы.',
+};
+
+const MARKET_LABELS = {
+  correctScore: 'матч',
+  firstSetScore: '1-й сет',
+  firstHalfGoal: 'гол в 1Т',
+  firstHalfTotal15: 'тотал 1Т',
+  firstHalfResult: 'исход 1Т',
+  firstHalfScore: 'счёт 1Т',
+};
+
+const OUTCOME_LABELS = {
+  yes: 'да',
+  no: 'нет',
+  over: 'ТБ 1.5',
+  under: 'ТМ 1.5',
+  1: 'хозяева',
+  X: 'ничья',
+  2: 'гости',
+};
+
+const outcomeLabel = (market, outcome) =>
+  market === 'firstHalfResult' || market === 'firstHalfGoal' || market === 'firstHalfTotal15'
+    ? OUTCOME_LABELS[outcome] ?? outcome
+    : outcome;
+
+/* ---------- вспомогательное ---------- */
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function showBanner(text) {
+  if (!text) {
+    els.banner.hidden = true;
+    return;
+  }
+  els.banner.textContent = text;
+  els.banner.hidden = false;
+}
+
+const placeholder = (text) => element('p', 'muted content__placeholder', text);
+
+/* ---------- строки рынка ---------- */
+
+function renderRow(row, isSignal) {
+  const node = element('div', `row${isSignal ? ' row--signal' : ''}`);
+
+  const label = element('div', 'row__score', outcomeLabel(row.market, row.outcome));
+  label.append(element('span', 'row__market', MARKET_LABELS[row.market] ?? row.market));
+  node.append(label);
+
+  node.append(element('div', 'row__cell', percent(row.modelProb)));
+  node.append(element('div', 'row__cell', decimal(row.marketOdds)));
+
+  const edge = element('div', `row__cell edge ${row.edge >= 0 ? 'edge--pos' : 'edge--neg'}`);
+  edge.textContent = signed(row.edge);
+  if (isSignal && row.stake > 0) {
+    edge.append(element('span', 'stake', ` ${percent(row.stake)} банка`));
+  }
+  node.append(edge);
+  return node;
+}
+
+function renderMarketTable(entry, { onlySignals, minEdge }) {
+  const visible = entry.markets
+    .filter((row) => !onlySignals || row.edge >= minEdge)
+    .sort((a, b) => b.edge - a.edge);
+
+  if (visible.length === 0) {
+    return element('div', 'empty', 'Преимущества выше порога нет.');
+  }
+
+  const rows = element('div', 'rows');
+  const header = element('div', 'row row__head');
+  for (const title of ['исход', 'модель', 'кэф', 'преим.']) {
+    header.append(element('div', title === 'исход' ? '' : 'row__cell', title));
+  }
+  rows.append(header);
+
+  const signalKeys = new Set(entry.signals.map((s) => `${s.market}:${s.outcome}`));
+  for (const row of visible) {
+    rows.append(renderRow(row, signalKeys.has(`${row.market}:${row.outcome}`) && row.edge >= minEdge));
+  }
+  return rows;
+}
+
+function progressBar(share) {
+  const bar = element('div', 'odds-bar');
+  const fill = element('div', 'odds-bar__fill');
+  fill.style.width = `${(share * 100).toFixed(1)}%`;
+  bar.append(fill);
+  return bar;
+}
+
+
+/* ---------- предпросмотр матча ---------- */
+
+function comparisonRow(row, isSignal) {
+  const node = element('div', `compare__row${isSignal ? ' compare__row--signal' : ''}`);
+
+  // Название рынка не дублируем: строки уже сгруппированы по нему заголовком.
+  node.append(element('div', 'compare__label', outcomeLabel(row.market, row.outcome)));
+
+  // Полосы масштабируются к самому вероятному исходу, иначе на редких
+  // счетах обе полосы вырождаются в точку и сравнивать нечего.
+  const bars = element('div', 'compare__bars');
+  for (const [kind, value] of [['model', row.modelProb], ['market', row.marketProb]]) {
+    const track = element('div', 'compare__track');
+    const fill = element('div', `compare__fill compare__fill--${kind}`);
+    fill.style.width = `${Math.min(100, (value / row.scale) * 100).toFixed(1)}%`;
+    track.append(fill);
+    bars.append(track);
+  }
+  node.append(bars);
+
+  const numbers = element('div', 'compare__numbers');
+  numbers.append(element('span', 'compare__edge', signed(row.edge)));
+  numbers.append(element('span', null, `кэф ${decimal(row.marketOdds)}`));
+  node.append(numbers);
+
+  return node;
+}
+
+function previewFacts(entry) {
+  const facts = element('div', 'preview__facts');
+  const add = (text) => facts.append(element('span', null, text));
+
+  if (entry.sport === 'tennis') {
+    add(`${entry.match.tournament}`);
+    add(`подача ${percent(entry.model.pA, 0)} / ${percent(entry.model.pB, 0)}`);
+    add(`победа ${percent(entry.model.aWins, 0)}`);
+    if (entry.model.calibrated) add('поправка применена');
+  } else {
+    add(`${entry.match.competition}`);
+    add(`xG 1Т ${decimal(entry.model.lambdaHome)} : ${decimal(entry.model.lambdaAway)}`);
+    add(`гол ${percent(entry.model.goalChance, 0)}`);
+    if (!entry.match.knownTeams) add('команды не в справочнике');
+  }
+  return facts;
+}
+
+function renderPreview(entry) {
+  const names = entry.sport === 'tennis' ? entry.match.players : entry.match.teams;
+  const body = element('div');
+
+  const head = element('div', 'preview__head');
+  head.append(element('h2', 'preview__title', `${names[0]} — ${names[1]}`));
+
+  const close = element('button', 'preview__close', '\u00d7');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Закрыть');
+  close.addEventListener('click', () => els.preview.close());
+  head.append(close);
+
+  body.append(head, previewFacts(entry));
+
+  const signalKeys = new Set(entry.signals.map((s) => `${s.market}:${s.outcome}`));
+
+  // Рынки показываются целиком, включая невыгодные: смысл предпросмотра —
+  // увидеть, где модель расходится с рынком, а не только отобранные сигналы.
+  const byMarket = new Map();
+  for (const row of entry.markets) {
+    if (!byMarket.has(row.market)) byMarket.set(row.market, []);
+    byMarket.get(row.market).push(row);
+  }
+
+  if (byMarket.size === 0) {
+    body.append(element('p', 'preview__note', 'Котировок по этому матчу нет.'));
+  }
+
+  for (const [market, rows] of byMarket) {
+    body.append(element('div', 'preview__section', MARKET_LABELS[market] ?? market));
+
+    const legend = element('div', 'legend');
+    legend.append(element('span', 'legend--model', 'модель'));
+    legend.append(element('span', 'legend--market', 'рынок'));
+    body.append(legend);
+
+    const scale = Math.max(...rows.map((r) => Math.max(r.modelProb, r.marketProb)), 0.01);
+    const list = element('div', 'compare');
+    for (const row of [...rows].sort((a, b) => b.modelProb - a.modelProb)) {
+      list.append(comparisonRow({ ...row, scale }, signalKeys.has(`${row.market}:${row.outcome}`)));
+    }
+    body.append(list);
+  }
+
+  const overround = entry.markets[0]?.overround;
+  if (overround != null) {
+    body.append(element(
+      'p',
+      'preview__note',
+      `Маржа букмекера в этом рынке ${percent(overround)}. Полосы «рынок» показаны `
+      + 'уже без неё — иначе они всегда были бы выше модели.',
+    ));
+  }
+
+  els.previewBody.replaceChildren(body);
+  els.preview.showModal();
+}
+
+// Клик по подложке закрывает окно: на телефоне это привычнее кнопки.
+els.preview.addEventListener('click', (event) => {
+  if (event.target === els.preview) els.preview.close();
+});
+
+/* ---------- карточки ---------- */
+
+/** Карточка открывает разбор и мышью, и с клавиатуры. */
+function makeOpenable(card, entry) {
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.addEventListener('click', () => renderPreview(entry));
+  card.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      renderPreview(entry);
+    }
+  });
+  return card;
+}
+
+function renderTennisCard(entry, filters) {
+  const card = element('article', 'card');
+  const head = element('div', 'card__head');
+
+  const players = element('div', 'card__players');
+  players.append(element('span', null, entry.match.players[0]));
+  players.append(element('span', 'card__vs', '—'));
+  players.append(element('span', null, entry.match.players[1]));
+  head.append(players);
+
+  const tags = element('div', 'card__tags');
+  for (const tag of [entry.match.tournament, entry.match.surface, entry.match.tour?.toUpperCase()]) {
+    if (tag) tags.append(element('span', null, tag));
+  }
+  head.append(tags);
+  head.append(progressBar(entry.model.aWins));
+
+  const probs = element('div', 'card__probs');
+  probs.append(element('span', null, `победа ${percent(entry.model.aWins, 0)}`));
+  probs.append(element('span', null, percent(1 - entry.model.aWins, 0)));
+  head.append(probs);
+
+  card.append(head, renderMarketTable(entry, filters));
+  return makeOpenable(card, entry);
+}
+
+function renderFootballCard(entry, filters) {
+  const card = element('article', 'card');
+  const head = element('div', 'card__head');
+
+  const teams = element('div', 'card__players');
+  teams.append(element('span', null, entry.match.teams[0]));
+  teams.append(element('span', 'card__vs', '—'));
+  teams.append(element('span', null, entry.match.teams[1]));
+  head.append(teams);
+
+  const tags = element('div', 'card__tags');
+  if (entry.match.competition) tags.append(element('span', null, entry.match.competition));
+  tags.append(element('span', null, `xG 1Т ${decimal(entry.model.expectedGoals)}`));
+  if (!entry.match.knownTeams) tags.append(element('span', 'warn', 'команды не в справочнике'));
+  head.append(tags);
+
+  head.append(progressBar(entry.model.goalChance));
+  const probs = element('div', 'card__probs');
+  probs.append(element('span', null, `гол в 1-м тайме ${percent(entry.model.goalChance, 0)}`));
+  probs.append(element('span', null, `${decimal(entry.model.lambdaHome)} : ${decimal(entry.model.lambdaAway)}`));
+  head.append(probs);
+
+  card.append(head, renderMarketTable(entry, filters));
+  return makeOpenable(card, entry);
+}
+
+function renderSignalsView(sport) {
+  const payload = state.signals[sport];
+  if (!payload) return [placeholder('Загрузка…')];
+
+  const onlySignals = els.onlySignals.checked;
+  const minEdge = Number(els.minEdge.value) / 100;
+  const render = sport === 'tennis' ? renderTennisCard : renderFootballCard;
+
+  const cards = payload.matches
+    .map((entry) => ({ entry, best: Math.max(-1, ...entry.markets.map((m) => m.edge)) }))
+    .filter(({ best }) => !onlySignals || best >= minEdge)
+    .sort((a, b) => b.best - a.best)
+    .map(({ entry }) => render(entry, { onlySignals, minEdge }));
+
+  return cards.length ? cards : [placeholder('Нет матчей с преимуществом выше порога.')];
+}
+
+/* ---------- статистика ---------- */
+
+const TENNIS_COLUMNS = [
+  { key: 'name', title: 'игрок', align: 'left' },
+  { key: 'spw', title: 'подача', format: (v) => percent(v) },
+  { key: 'rpw', title: 'приём', format: (v) => percent(v) },
+  { key: 'matches', title: 'матчей', format: (v) => (v == null ? '—' : String(v)) },
+];
+
+const FOOTBALL_COLUMNS = [
+  { key: 'name', title: 'команда', align: 'left' },
+  { key: 'goalIn1HShare', title: 'гол в 1Т', format: (v) => percent(v, 0) },
+  { key: 'goals1HPerMatch', title: 'голов 1Т', format: (v) => decimal(v) },
+  { key: 'matches', title: 'матчей', format: (v) => String(v) },
+];
+
+function renderStatsView() {
+  const payload = state.stats[state.statsSport];
+  if (!payload) return [placeholder('Загрузка…')];
+
+  const nodes = [];
+  if (payload.note) nodes.push(element('div', 'note', payload.note));
+
+  if (payload.league) {
+    const summary = element('div', 'note');
+    summary.textContent =
+      `Лига: голов за матч ${decimal(payload.league.full.home + payload.league.full.away)}, `
+      + `в первом тайме ${decimal(payload.league.firstHalf.home + payload.league.firstHalf.away)}.`;
+    nodes.push(summary);
+  }
+
+  if (!payload.rows?.length) {
+    nodes.push(placeholder('Ничего не найдено.'));
+    return nodes;
+  }
+
+  const columns = state.statsSport === 'tennis' ? TENNIS_COLUMNS : FOOTBALL_COLUMNS;
+  const table = element('div', 'stats');
+
+  const header = element('div', 'stats__row stats__row--head');
+  for (const column of columns) {
+    header.append(element('div', column.align === 'left' ? '' : 'stats__cell', column.title));
+  }
+  table.append(header);
+
+  for (const row of payload.rows.slice(0, 100)) {
+    const line = element('div', 'stats__row');
+    for (const column of columns) {
+      const value = column.format ? column.format(row[column.key]) : row[column.key];
+      line.append(element('div', column.align === 'left' ? 'stats__name' : 'stats__cell', value));
+    }
+    table.append(line);
+  }
+
+  nodes.push(table);
+  if (payload.rows.length > 100) {
+    nodes.push(element('div', 'note', `Показаны первые 100 из ${payload.rows.length}. Уточни поиск.`));
+  }
+  return nodes;
+}
+
+/* ---------- отрисовка ---------- */
+
+function render() {
+  els.edgeValue.textContent = `${els.minEdge.value}%`;
+  els.footNote.textContent = FOOT_NOTES[state.tab];
+
+  const isStats = state.tab === 'stats';
+  els.filters.hidden = isStats;
+  els.statsControls.hidden = !isStats;
+
+  for (const tab of els.tabs) {
+    tab.classList.toggle('tab--active', tab.dataset.tab === state.tab);
+  }
+  for (const button of els.statsSports) {
+    button.classList.toggle('segmented__item--active', button.dataset.statsSport === state.statsSport);
+  }
+
+  if (isStats) {
+    els.provider.textContent = state.statsSport === 'tennis' ? 'игроки' : 'команды';
+    els.updated.textContent = '';
+    els.content.replaceChildren(...renderStatsView());
+    return;
+  }
+
+  const payload = state.signals[state.tab];
+  els.provider.textContent = payload?.provider ?? '—';
+  els.updated.textContent = payload?.generatedAt
+    ? `обновлено ${new Date(payload.generatedAt).toLocaleTimeString('ru-RU')}`
+    : '';
+  els.content.replaceChildren(...renderSignalsView(state.tab));
+}
+
+/* ---------- загрузка ---------- */
+
+/**
+ * Статическая сборка вшивает данные прямо в страницу: она открывается по
+ * HTTPS без сервера — с GitHub Pages, из артефакта, да хоть с флешки.
+ * Живые котировки в этом режиме не обновляются, зато интерфейс работает
+ * везде, где нельзя поднять Node.
+ */
+const EMBEDDED = typeof window !== 'undefined' ? window.EMBEDDED_DATA : null;
+
+async function fetchJson(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`сервер ответил ${res.status}`);
+  return res.json();
+}
+
+async function loadSignals(sport, { force = false } = {}) {
+  els.refresh.disabled = true;
+  try {
+    const payload = EMBEDDED
+      ? structuredClone(EMBEDDED.signals[sport])
+      : await fetchJson(`/api/signals?sport=${sport}${force ? '&refresh=1' : ''}`);
+    state.signals[sport] = payload;
+    localStorage.setItem(`signals:${sport}`, JSON.stringify(payload));
+
+    // Замечание сервера важнее напоминания про демо-режим.
+    showBanner(
+      payload.note
+        ?? (EMBEDDED
+          ? 'Витрина: данные вшиты в страницу и не обновляются. Живые котировки — только с сервером.'
+          : payload.provider.includes('mock')
+            ? 'Демо-данные. Боевой фид задаётся в .env (PROVIDER, API_TENNIS_KEY, BETSAPI_TOKEN).'
+            : null),
+    );
+  } catch (err) {
+    const cached = localStorage.getItem(`signals:${sport}`);
+    if (cached) {
+      state.signals[sport] = JSON.parse(cached);
+      showBanner(`Нет связи с сервером (${err.message}). Показаны последние данные.`);
+    } else {
+      state.signals[sport] = { provider: '—', matches: [] };
+      showBanner(`Не удалось загрузить: ${err.message}`);
+    }
+  } finally {
+    els.refresh.disabled = false;
+    render();
+  }
+}
+
+async function loadStats(sport, query = '') {
+  try {
+    if (EMBEDDED) {
+      // Сервера нет — фильтруем на месте.
+      const source = EMBEDDED.stats[sport];
+      const needle = query.trim().toLowerCase();
+      state.stats[sport] = {
+        ...source,
+        rows: needle
+          ? source.rows.filter((row) => row.name.toLowerCase().includes(needle))
+          : source.rows,
+      };
+      render();
+      return;
+    }
+    state.stats[sport] = await fetchJson(`/api/stats?sport=${sport}&q=${encodeURIComponent(query)}`);
+  } catch (err) {
+    state.stats[sport] = { rows: [], note: `Не удалось загрузить: ${err.message}` };
+  }
+  render();
+}
+
+/* ---------- события ---------- */
+
+function openTab(tab) {
+  state.tab = tab;
+  render();
+
+  if (tab === 'stats') {
+    if (!state.stats[state.statsSport]) loadStats(state.statsSport);
+  } else if (!state.signals[tab]) {
+    loadSignals(tab);
+  }
+}
+
+for (const tab of els.tabs) {
+  tab.addEventListener('click', () => openTab(tab.dataset.tab));
+}
+
+for (const button of els.statsSports) {
+  button.addEventListener('click', () => {
+    state.statsSport = button.dataset.statsSport;
+    els.statsSearch.value = '';
+    render();
+    loadStats(state.statsSport);
+  });
+}
+
+let searchTimer;
+els.statsSearch.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadStats(state.statsSport, els.statsSearch.value.trim()), 250);
+});
+
+els.refresh.addEventListener('click', () => {
+  if (state.tab === 'stats') loadStats(state.statsSport, els.statsSearch.value.trim());
+  else loadSignals(state.tab, { force: true });
+});
+
+els.onlySignals.addEventListener('change', render);
+els.minEdge.addEventListener('input', render);
+
+// Service worker работает только в защищённом контексте. По http на голый IP
+// его не будет — офлайн и установка на экран станут недоступны, но само
+// приложение продолжит работать.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register(EMBEDDED ? './sw.js' : '/sw.js').catch((err) => {
+    console.warn('Service worker не зарегистрирован:', err);
+  });
+}
+
+loadSignals('tennis');
+
+</script>
+</body>
+</html>
