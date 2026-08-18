@@ -70,12 +70,38 @@ fi
 # ---------------------------------------------------------------------
 
 if [ "$USE_PORT80" = 1 ]; then
-  hr "4. Caddy на порту 80"
+  hr "4. Порт 80"
+
+  BUSY80="$(listen_addr 80)"
+  PORT80_TAKEN=$?
+
+  # Если 80-й свободен и мы можем на него сесть, прокси не нужен вовсе:
+  # лишний слой — это лишняя точка отказа и лишний пакет для установки.
+  if [ "$PORT80_TAKEN" -ne 0 ] && [ "$(id -u)" = "0" ]; then
+    say "порт 80 свободен — переношу приложение прямо на него, без прокси"
+
+    if grep -q '^PORT=' .env 2>/dev/null; then
+      sed -i "s|^PORT=.*|PORT=80|" .env
+    else
+      echo "PORT=80" >> .env
+    fi
+
+    if systemctl restart signals 2>/dev/null; then
+      say "служба перезапущена на порту 80"
+    else
+      say "перезапусти приложение вручную — оно теперь настроено на порт 80"
+    fi
+
+    sleep 2
+    PORT=80
+    USE_PORT80=0
+    LOCAL80="$(http_code "http://127.0.0.1/api/health")"
+    say "127.0.0.1:80 -> ${LOCAL80:-нет ответа}"
+  fi
 
   # Занятый 80-й почти всегда означает уже работающий веб-сервер. Ставить
   # поверх него Caddy бессмысленно: он не поднимется, а причина будет неочевидна.
-  BUSY80="$(listen_addr 80)"
-  if [ $? -eq 0 ] && ! command -v caddy >/dev/null 2>&1; then
+  if [ "$PORT80_TAKEN" -eq 0 ] && ! command -v caddy >/dev/null 2>&1; then
     say "порт 80 уже занят: $BUSY80"
     OWNER=""
     for name in nginx apache2 httpd; do
@@ -128,8 +154,13 @@ if [ -z "$EXT" ]; then
   exit 1
 fi
 
-OUT="$(probe "http://${EXT}:${PORT}/api/health")"
-say "http://${EXT}:${PORT} -> ${OUT:-НЕТ ОТВЕТА}"
+if [ "$PORT" = "80" ]; then
+  OUT="$(probe "http://${EXT}/api/health")"
+  say "http://${EXT} -> ${OUT:-НЕТ ОТВЕТА}"
+else
+  OUT="$(probe "http://${EXT}:${PORT}/api/health")"
+  say "http://${EXT}:${PORT} -> ${OUT:-НЕТ ОТВЕТА}"
+fi
 
 OUT80=""
 if [ "$USE_PORT80" = 1 ]; then
@@ -142,7 +173,7 @@ fi
 hr "ВЫВОД"
 if [ "$OUT" = "200" ] || [ "$OUT80" = "200" ]; then
   ADDR="http://${EXT}:${PORT}"
-  [ "$OUT80" = "200" ] && ADDR="http://${EXT}"
+  { [ "$OUT80" = "200" ] || [ "$PORT" = "80" ]; } && ADDR="http://${EXT}"
 
   say "Сервер отдаёт наружу. Открывай с телефона: $ADDR"
   say ""
