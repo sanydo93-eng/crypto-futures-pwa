@@ -13,8 +13,11 @@
  *
  * Нужен доступ в интернет к raw.githubusercontent.com.
  */
-import { writeFile, mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { writeFile, mkdir, readFile, rm } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { tmpdir } from 'node:os';
 
 import { parseCsv } from '../src/csv.js';
 
@@ -22,6 +25,32 @@ const SOURCES = {
   atp: 'https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_%YEAR%.csv',
   wta: 'https://raw.githubusercontent.com/JeffSackmann/tennis_wta/master/wta_matches_%YEAR%.csv',
 };
+
+// Запасной путь: raw.githubusercontent.com блокируют в ряде стран, тогда как
+// сам github.com остаётся доступен. Мелкое клонирование забирает те же файлы
+// по другому протоколу и с другого хоста.
+const REPOS = {
+  atp: 'https://github.com/JeffSackmann/tennis_atp.git',
+  wta: 'https://github.com/JeffSackmann/tennis_wta.git',
+};
+
+const run = promisify(execFile);
+const clones = new Map();
+
+async function cloneArchive(tour) {
+  if (clones.has(tour)) return clones.get(tour);
+
+  const target = join(tmpdir(), `sackmann-${tour}`);
+  await rm(target, { recursive: true, force: true });
+
+  console.log(`  ${tour}: пробую через git clone (raw.githubusercontent недоступен)`);
+  // Без --filter: при обычном checkout git всё равно дотягивает содержимое
+  // файлов, а частичное клонирование добавляет лишнюю точку отказа.
+  await run('git', ['clone', '--depth', '1', REPOS[tour], target], { timeout: 900_000 });
+
+  clones.set(tour, target);
+  return target;
+}
 
 const SURFACES = ['hard', 'clay', 'grass', 'carpet'];
 
@@ -66,12 +95,24 @@ function finalize(tally) {
 
 async function fetchYear(tour, year) {
   const url = SOURCES[tour].replace('%YEAR%', String(year));
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.warn(`  ${tour} ${year}: пропущен (HTTP ${res.status})`);
+
+  try {
+    const res = await fetch(url);
+    if (res.ok) return parseCsv(await res.text());
+    console.warn(`  ${tour} ${year}: HTTP ${res.status}`);
+  } catch (err) {
+    console.warn(`  ${tour} ${year}: ${err.message}`);
+  }
+
+  // Прямая загрузка не удалась — забираем тот же файл из клона репозитория.
+  try {
+    const dir = await cloneArchive(tour);
+    const file = join(dir, `${tour}_matches_${year}.csv`);
+    return parseCsv(await readFile(file, 'utf8'));
+  } catch (err) {
+    console.warn(`  ${tour} ${year}: пропущен (${err.code === 'ENOENT' ? 'нет такого года в архиве' : err.message})`);
     return [];
   }
-  return parseCsv(await res.text());
 }
 
 async function main() {
@@ -163,7 +204,9 @@ async function main() {
     console.error('Обычные причины:');
     console.error('  - нет доступа к raw.githubusercontent.com;');
     console.error('  - указанные годы ещё не опубликованы в архиве.');
-    console.error('Проверь: curl -sSI https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_2023.csv');
+      console.error('Проверь оба пути:');
+    console.error('  curl -sSI https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_2023.csv');
+    console.error('  git ls-remote --heads https://github.com/JeffSackmann/tennis_atp.git');
     process.exit(1);
   }
 
