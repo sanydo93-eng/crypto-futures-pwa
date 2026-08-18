@@ -71,7 +71,32 @@ fi
 
 if [ "$USE_PORT80" = 1 ]; then
   hr "4. Caddy на порту 80"
-  if ! command -v caddy >/dev/null 2>&1; then
+
+  # Занятый 80-й почти всегда означает уже работающий веб-сервер. Ставить
+  # поверх него Caddy бессмысленно: он не поднимется, а причина будет неочевидна.
+  BUSY80="$(listen_addr 80)"
+  if [ $? -eq 0 ] && ! command -v caddy >/dev/null 2>&1; then
+    say "порт 80 уже занят: $BUSY80"
+    OWNER=""
+    for name in nginx apache2 httpd; do
+      systemctl is-active --quiet "$name" 2>/dev/null && OWNER="$name" && break
+    done
+
+    if [ -n "$OWNER" ]; then
+      say "его держит $OWNER — Caddy туда не встанет."
+      say ""
+      say "Правильный путь: положить витрину в корень $OWNER одной командой:"
+      say "  bash deploy/publish-static.sh"
+      say ""
+      say "Либо добавить в $OWNER проксирование на 127.0.0.1:${PORT} самому."
+    else
+      say "чем именно занят — неясно, но Caddy туда не встанет."
+      say "Освободи порт 80 либо используй: bash deploy/publish-static.sh"
+    fi
+    USE_PORT80=0
+  fi
+
+  if [ "$USE_PORT80" = 1 ] && ! command -v caddy >/dev/null 2>&1; then
     say "ставлю Caddy"
     $SUDO apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl >/dev/null 2>&1
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
