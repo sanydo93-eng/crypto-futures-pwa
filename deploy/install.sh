@@ -222,6 +222,10 @@ if [ "$INSTALL_SERVICE" = 1 ]; then
   [ "$IS_TERMUX" = 1 ] && die "systemd в Termux нет — запускай без --service"
   command -v systemctl >/dev/null 2>&1 || die "systemctl не найден"
 
+  # Каталог должен существовать до старта службы: на него ссылается
+  # ReadWritePaths, и systemd не поднимет юнит с несуществующим путём.
+  mkdir -p data
+
   node scripts/launch.js --check || die "проверки не пройдены, служба не установлена"
 
   # Юнит запускается от www-data; под этим пользователем нужен доступ к каталогу.

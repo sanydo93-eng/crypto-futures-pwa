@@ -30,7 +30,10 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/signals/data
+# Дефис в начале пути обязателен: без него systemd отказывается запускать
+# службу, если каталога ещё нет, а он появляется только после первой
+# успешной сборки справочников.
+ReadWritePaths=-/opt/signals/data
 
 [Install]
 WantedBy=multi-user.target

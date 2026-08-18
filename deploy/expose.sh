@@ -32,7 +32,21 @@ LOCAL="$(probe "http://127.0.0.1:${PORT}/api/health")"
 say "127.0.0.1:${PORT} -> ${LOCAL:-нет ответа}"
 if [ "$LOCAL" != "200" ]; then
   say "Приложение не отвечает даже локально — снаружи чинить нечего."
-  say "Смотри: systemctl status signals; journalctl -u signals -n 50"
+
+  # Причина почти всегда в журнале, поэтому показываем её здесь же,
+  # а не отправляем за ней отдельной командой.
+  if command -v systemctl >/dev/null 2>&1; then
+    say ""
+    say "Состояние службы:"
+    systemctl status signals --no-pager 2>&1 | head -12 | sed 's/^/    /'
+    say ""
+    say "Последние строки журнала:"
+    journalctl -u signals -n 20 --no-pager 2>&1 | tail -20 | sed 's/^/    /'
+    say ""
+    say "Если в журнале «Failed to set up mount namespacing» или упоминание"
+    say "ReadWritePaths — не хватает каталога data. Лечится так:"
+    say "    mkdir -p $(pwd)/data && systemctl daemon-reload && systemctl restart signals"
+  fi
   exit 1
 fi
 

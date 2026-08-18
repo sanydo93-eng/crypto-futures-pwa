@@ -12,6 +12,7 @@
 #   signals expose     открыть доступ снаружи
 #   signals where      где приложение и по какому адресу
 #   signals update     git pull и перезапуск
+#   signals repair     переустановить службу и запустить заново
 set -uo pipefail
 
 # Каталог проекта подставляется при установке; переменная окружения важнее,
@@ -49,6 +50,18 @@ case "${1:-start}" in
   update)
     git pull || exit 1
     $SUDO systemctl restart signals 2>/dev/null && echo "служба перезапущена"
+    ;;
+  repair)
+    # Юнит из репозитория и юнит, который читает systemd, — разные файлы.
+    # git pull обновляет только первый, поэтому копию надо положить заново.
+    mkdir -p data
+    RUN_USER="$(id -un)"
+    sed -e "s|/opt/signals|$ROOT|g" -e "s|^User=.*|User=$RUN_USER|" deploy/signals.service \
+      | $SUDO tee /etc/systemd/system/signals.service >/dev/null || exit 1
+    $SUDO systemctl daemon-reload
+    $SUDO systemctl restart signals
+    sleep 2
+    $SUDO systemctl status signals --no-pager 2>&1 | head -12
     ;;
   where)
     echo "каталог: $ROOT"
