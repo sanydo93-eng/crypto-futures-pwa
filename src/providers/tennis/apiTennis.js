@@ -102,6 +102,16 @@ export function createProvider(config) {
 
   return {
     name,
+
+    /** Сырые ответы для диагностики — используется scripts/probe-provider.js. */
+    async fetchRaw({ date = new Date().toISOString().slice(0, 10) } = {}) {
+      const [fixtures, odds] = await Promise.all([
+        call('get_fixtures', apiKey, { date_start: date, date_stop: date }),
+        call('get_odds', apiKey, { date_start: date, date_stop: date }),
+      ]);
+      return { fixtures, odds };
+    },
+
     async fetchMatches({ date = new Date().toISOString().slice(0, 10), days = 1 } = {}) {
       statsPromise ??= PlayerStats.load(statsPath);
       const stats = await statsPromise;
@@ -127,8 +137,6 @@ export function createProvider(config) {
         if (!isSingles(fixture)) continue;
 
         const markets = extractMarkets(oddsByMatch.get(String(fixture.event_key)));
-        if (!Object.keys(markets).length) continue;
-
         const tour = detectTour(fixture);
         const surface = detectSurface(fixture);
         const nameA = fixture.event_first_player;
@@ -152,9 +160,12 @@ export function createProvider(config) {
             b: { name: nameB, spw: b.spw, rpw: b.rpw, known: b.known, matches: b.matches },
           },
           markets,
+          hasOdds: Object.keys(markets).length > 0,
         });
       }
-      return matches;
+
+      // Матчи с котировками — вперёд: сигналы возможны только по ним.
+      return matches.sort((a, b) => Number(b.hasOdds) - Number(a.hasOdds));
     },
   };
 }

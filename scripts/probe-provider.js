@@ -7,6 +7,7 @@
  * неверные сигналы, поэтому проверять нужно глазами.
  *
  *   npm run probe                                   # теннис
+ *   npm run probe -- --raw                          # плюс сырой ответ API
  *   npm run probe -- --sport football               # футбол
  *   npm run probe -- --sport football --raw         # плюс сырой ответ API
  */
@@ -47,18 +48,52 @@ async function probeTennis() {
   }
 
   const provider = createTennisProvider(config);
-  const matches = await provider.fetchMatches();
-
   console.log(`Провайдер: ${provider.name}`);
-  console.log(`Матчей с коэффициентами: ${matches.length}\n`);
+
+  // Сырой ответ — единственный способ увидеть, как рынки называются на самом деле.
+  if (flag('raw') && provider.fetchRaw) {
+    const raw = await provider.fetchRaw();
+    line();
+    console.log(`get_fixtures: матчей ${raw.fixtures?.length ?? 0}`);
+    console.dir(raw.fixtures?.[0] ?? null, { depth: 4 });
+
+    const oddsList = Array.isArray(raw.odds) ? raw.odds : Object.values(raw.odds ?? {});
+    console.log(`\nget_odds: записей ${oddsList.length}`);
+    console.dir(oddsList[0] ?? null, { depth: 5 });
+
+    if (oddsList[0]) {
+      const names = new Set();
+      for (const entry of oddsList.slice(0, 20)) {
+        for (const key of Object.keys(entry)) {
+          if (entry[key] && typeof entry[key] === 'object') names.add(key);
+        }
+      }
+      console.log('\nНазвания рынков, встреченные в ответе:');
+      for (const marketName of [...names].sort()) console.log(`  - ${marketName}`);
+      console.log('\nЕсли среди них есть точный счёт, а разбор его не видит —');
+      console.log('добавь название в MARKET_ALIASES в src/providers/tennis/apiTennis.js');
+    }
+    line();
+  }
+
+  const matches = await provider.fetchMatches();
+  const withOdds = matches.filter((m) => m.hasOdds !== false).length;
+  console.log(`Матчей всего: ${matches.length}, из них с нужными рынками: ${withOdds}\n`);
 
   if (matches.length === 0) {
-    console.log('Пусто. Обычные причины:');
-    console.log('  - на дату нет матчей с нужными рынками;');
-    console.log('  - в тарифе нет доступа к методу get_odds;');
-    console.log('  - названия рынков отличаются от MARKET_ALIASES');
-    console.log('    в src/providers/tennis/apiTennis.js.');
+    console.log('Матчей нет вовсе — значит get_fixtures ничего не вернул на эту дату.');
+    console.log('Проверь дату и тариф: npm run probe -- --raw');
     return;
+  }
+
+  if (withOdds === 0) {
+    console.log('Матчи есть, но ни у одного не нашлось нужных рынков.');
+    console.log('Причины по убыванию вероятности:');
+    console.log('  - в тарифе нет доступа к методу get_odds;');
+    console.log('  - названия рынков отличаются от MARKET_ALIASES;');
+    console.log('  - точный счёт на эти матчи просто не котируется.');
+    console.log('\nРазличить их можно только по сырому ответу:');
+    console.log('  npm run probe -- --raw\n');
   }
 
   for (const match of matches.slice(0, 3)) {
