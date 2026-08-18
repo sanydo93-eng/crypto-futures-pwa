@@ -16,6 +16,7 @@
     "stats:football": "node scripts/build-football-stats.js",
     "backtest": "node scripts/backtest.js",
     "static": "node scripts/build-static.js --single --artifact",
+    "port": "node scripts/find-port.js",
     "probe": "node scripts/probe-provider.js"
   }
 }

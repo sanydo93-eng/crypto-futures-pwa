@@ -167,11 +167,23 @@ if (await portIsFree(config.port, config.host)) {
 } else if (checkOnly) {
   warn(`${config.port} занят — вероятно, приложение уже работает`);
 } else {
+  // Ищем следующий свободный, чтобы подсказка была конкретной, а не
+  // «выбери другой порт» без указания какой.
+  let suggestion = null;
+  for (let port = config.port + 1; port < config.port + 20; port++) {
+    if (await portIsFree(port, config.host)) {
+      suggestion = port;
+      break;
+    }
+  }
+
   fail(`порт ${config.port} занят`, [
-    'если приложение уже запущено службой: sudo systemctl restart signals',
-    `кто занял: ss -tlnp | grep ${config.port}`,
-    'либо выбери другой порт: PORT=8101 npm run launch',
-  ]);
+    'если приложение уже запущено службой: systemctl restart signals',
+    suggestion
+      ? `свободен ${suggestion} — запуск: PORT=${suggestion} npm run launch`
+      : 'свободного порта рядом не нашлось',
+    suggestion ? `или навсегда: sed -i "s/^PORT=.*/PORT=${suggestion}/" .env` : '',
+  ].filter(Boolean));
 }
 
 console.log('\n' + '─'.repeat(40));

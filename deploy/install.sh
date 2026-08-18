@@ -11,6 +11,7 @@ set -euo pipefail
 PROVIDER="api-tennis"
 INSTALL_SERVICE=0
 FORCE_NODE=0
+PORT_FIXED=0
 PORT="${PORT:-8100}"
 
 while [ $# -gt 0 ]; do
@@ -18,7 +19,7 @@ while [ $# -gt 0 ]; do
     --service) INSTALL_SERVICE=1 ;;
     --provider) PROVIDER="${2:-api-tennis}"; shift ;;
     --install-node) FORCE_NODE=1 ;;
-    --port) PORT="${2:-8100}"; shift ;;
+    --port) PORT="${2:-8100}"; PORT_FIXED=1; shift ;;
     -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "Неизвестный аргумент: $1"; exit 1 ;;
   esac
@@ -136,6 +137,18 @@ set_env() {
 }
 
 set_env PROVIDER "$PROVIDER"
+
+# Порт мог занять другой проект на этом же сервере. Молча упасть на этом
+# в самом конце установки — худший вариант, поэтому подбираем заранее.
+FREE_PORT="$(node scripts/find-port.js "$PORT" 2>/dev/null || echo "$PORT")"
+if [ "$FREE_PORT" != "$PORT" ]; then
+  if [ "$PORT_FIXED" = 1 ]; then
+    die "порт $PORT занят, а он задан явно. Освободи его или укажи другой: --port $FREE_PORT"
+  fi
+  warn "порт $PORT занят, беру $FREE_PORT"
+  PORT="$FREE_PORT"
+fi
+
 set_env PORT "$PORT"
 set_env HOST "0.0.0.0"
 ok "провайдер: $PROVIDER, порт: $PORT, слушает 0.0.0.0"
