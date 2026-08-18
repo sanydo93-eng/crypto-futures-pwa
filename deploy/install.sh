@@ -197,7 +197,23 @@ fi
 
 # ---------------------------------------------------------------------
 
-step 5 "Проверка связи и запуск"
+step 5 "Команда signals"
+
+# Обёртка нужна не для красоты: половина неудачных запусков — это команды,
+# выполненные не в том каталоге. Она подставляет каталог сама.
+BINDIR="/usr/local/bin"
+if [ -d "$BINDIR" ] && [ -w "$BINDIR" ] || [ -n "$SUDO" ]; then
+  sed "s|__ROOT__|$ROOT|" bin/signals | $SUDO tee "$BINDIR/signals" >/dev/null \
+    && $SUDO chmod +x "$BINDIR/signals" \
+    && ok "команда signals доступна из любого каталога"
+else
+  warn "не удалось поставить команду signals в $BINDIR"
+  warn "пользуйся полными путями: cd $ROOT && npm run launch"
+fi
+
+# ---------------------------------------------------------------------
+
+step 6 "Проверка связи и запуск"
 
 # shellcheck disable=SC2046
 export $(grep -v '^#' .env | grep -v '^$' | xargs) 2>/dev/null || true

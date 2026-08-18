@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Управление приложением из любого каталога.
+#
+#   signals            запуск с проверками
+#   signals start      то же
+#   signals status     состояние службы
+#   signals restart    перезапуск службы
+#   signals stop       остановить службу
+#   signals logs       логи вживую
+#   signals doctor     полная диагностика
+#   signals probe      что отдаёт провайдер котировок
+#   signals expose     открыть доступ снаружи
+#   signals where      где приложение и по какому адресу
+#   signals update     git pull и перезапуск
+set -uo pipefail
+
+# Каталог проекта подставляется при установке; переменная окружения важнее,
+# чтобы одну и ту же обёртку можно было навести на другую копию.
+ROOT="${SIGNALS_ROOT:-__ROOT__}"
+
+if [ ! -d "$ROOT" ]; then
+  echo "Каталог проекта не найден: $ROOT" >&2
+  echo "Укажи явно: SIGNALS_ROOT=/путь/к/signals signals $*" >&2
+  exit 1
+fi
+cd "$ROOT" || exit 1
+
+SUDO=""
+[ "$(id -u)" != "0" ] && command -v sudo >/dev/null 2>&1 && SUDO="sudo"
+
+# Справка — это шапка файла: печатаем комментарии, пока они не кончились,
+# а не фиксированный диапазон строк, который разъезжается при правках.
+usage() { awk 'NR>1 { if (/^#/) print; else exit }' "$0"; }
+
+case "${1:-start}" in
+  start|launch) exec node scripts/launch.js "${@:2}" ;;
+  check)        exec node scripts/launch.js --check ;;
+  status)       exec $SUDO systemctl status signals --no-pager ;;
+  restart)      exec $SUDO systemctl restart signals ;;
+  stop)         exec $SUDO systemctl stop signals ;;
+  logs)         exec $SUDO journalctl -u signals -f ;;
+  doctor)       exec bash deploy/doctor.sh ;;
+  probe)        exec node scripts/probe-provider.js "${@:2}" ;;
+  expose)       exec bash deploy/expose.sh "${@:2}" ;;
+  static)       exec bash deploy/publish-static.sh "${@:2}" ;;
+  port)         exec node scripts/find-port.js "${@:2}" ;;
+  backtest)     exec node scripts/backtest.js "${@:2}" ;;
+  test)         exec node --test "test/**/*.test.js" ;;
+  update)
+    git pull || exit 1
+    $SUDO systemctl restart signals 2>/dev/null && echo "служба перезапущена"
+    ;;
+  where)
+    echo "каталог: $ROOT"
+    if [ -f .env ]; then
+      port="$(grep -E '^PORT=' .env | cut -d= -f2 | tr -d '[:space:]')"
+      echo "порт:    ${port:-8100}"
+      ip="$(curl -sS --max-time 5 https://api.ipify.org 2>/dev/null)"
+      [ -n "$ip" ] && echo "адрес:   http://${ip}:${port:-8100}"
+    else
+      echo ".env отсутствует — приложение ещё не настроено"
+    fi
+    ;;
+  -h|--help|help) usage ;;
+  *)
+    echo "Неизвестная команда: $1" >&2
+    usage >&2
+    exit 1
+    ;;
+esac
