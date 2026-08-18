@@ -382,6 +382,7 @@ npm run backtest -- --tour atp --from 2021 --to 2025 \
 - `deploy/README.md` — доступ снаружи, firewall, HTTPS, конфиги Caddy;
 - `deploy/signals.service` — юнит systemd;
 - `deploy/doctor.sh` — сбор диагностики одной командой, когда что-то не работает;
+- `deploy/expose.sh` — открыть доступ снаружи: firewall, проверка, при `--port80` перевод на порт 80;
 - `deploy/diagnose.sh` — диагностика недоступности порта.
 
 ## Структура

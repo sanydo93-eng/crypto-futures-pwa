@@ -8,6 +8,7 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.." 2>/dev/null || true
+. "$(dirname "$0")/lib.sh" 2>/dev/null || true
 ROOT="$(pwd)"
 
 hr()  { printf '\n=== %s\n' "$1"; }
@@ -74,22 +75,16 @@ else
 fi
 
 hr "ПОРТ $PORT"
-if command -v ss >/dev/null 2>&1; then
-  listening="$(ss -tlnp 2>/dev/null | grep ":${PORT}\b")"
-elif command -v netstat >/dev/null 2>&1; then
-  listening="$(netstat -tlnp 2>/dev/null | grep ":${PORT}\b")"
-else
-  listening=""
-fi
-
-if [ -n "$listening" ]; then
-  say "слушает: $listening"
-  case "$listening" in
-    *127.0.0.1:*) say "ВНИМАНИЕ: только localhost — снаружи не откроется, нужен HOST=0.0.0.0" ;;
-  esac
-else
-  say "никто не слушает — приложение не запущено"
-fi
+listening="$(listen_addr "$PORT")"
+case "$?" in
+  0)
+    say "слушает: $listening"
+    is_loopback_only "$listening" \
+      && say "ВНИМАНИЕ: только localhost — снаружи не откроется, нужен HOST=0.0.0.0"
+    ;;
+  1) say "никто не слушает — приложение не запущено" ;;
+  2) say "проверить нечем: нет ни ss, ни netstat, ни /proc/net/tcp" ;;
+esac
 
 hr "ЛОКАЛЬНЫЙ ОТВЕТ"
 if command -v curl >/dev/null 2>&1; then
@@ -104,7 +99,7 @@ else
 fi
 
 hr "ВНЕШНИЙ ДОСТУП"
-ext="$(curl -sS --max-time 5 https://api.ipify.org 2>/dev/null)"
+ext="$(external_ip)"
 say "внешний IP: ${ext:-не определён}"
 if [ -n "$ext" ]; then
   code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 6 "http://${ext}:${PORT}/api/health" 2>/dev/null)"
